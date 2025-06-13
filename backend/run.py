@@ -2,56 +2,50 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 
-from app.redis_client import get_pose_result
-from app.pose_logic import (
-    pushup_landmarks, pushup_angles,
-    situp_landmarks, situp_angles,
-    squat_landmarks, squat_angles,
-    pullup_landmarks, pullup_angles,
-    jumping_jack_landmarks, jumping_jack_angles,
-)
+from app.logic import landmark_logic, angle_logic
+from app import data_loader as dl
+from app.data_loader import posture_map
 
 app = Flask(__name__)
 CORS(app)
 
-# {
-#   "posture": "push_up",
-#   "landmarks": [...],   // 33*3 = 99 floats
-#   "angles": [...]       // list of angles
-# }
+# @app.route('/pose', methods=['POST'])
+# def receive_pose():
+#     data = request.get_json()
+#     posture = data.get('posture')
+#     mediapipe = data.get('mediapipe', [])
 
-# Map posture names to reference data
-LANDMARKS_MAP = {
-    "push_up": pushup_landmarks,
-    "sit_up": situp_landmarks,
-    "squat": squat_landmarks,
-    "pull_up": pullup_landmarks,
-    "jumping_jack": jumping_jack_landmarks,
-}
-ANGLES_MAP = {
-    "push_up": pushup_angles,
-    "sit_up": situp_angles,
-    "squat": squat_angles,
-    "pull_up": pullup_angles,
-    "jumping_jack": jumping_jack_angles,
-}
+#     if posture not in posture_map:
+#         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
 
-@app.route('/pose', methods=['POST'])
-def receive_pose():
-    data = request.get_json()
-    posture = data.get('posture')
-    landmarks = data.get('landmarks', [])
-    angles = data.get('angles', [])
+#     feedback = {}
 
-    if posture not in LANDMARKS_MAP or posture not in ANGLES_MAP:
-        return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
+#     if mediapipe:
+#         input_np = np.array(mediapipe)
+#         feedback['landmarks'] = landmark_logic(posture, input_np)
+#         feedback['angles'] = angle_logic(posture, input_np)  # If you want to use the same input for angles
 
-    feedback = {}
+#     return jsonify({
+#         'status': 'success',
+#         'feedback': feedback
+#     }), 200
 
-    return jsonify({
-        'status': 'success',
-        'feedback': feedback
-    }), 200
+def main():
+    # Example input
+    posture = "push_up"
+    mediapipe = [0.48121005296707153, 0.6747843623161316, -2.447263240814209, 0.5315266847610474, 0.574421226978302, -2.390549898147583, 0.5643851161003113, 0.5674421191215515, -2.390531063079834, 0.5916626453399658, 0.5622946619987488, -2.392540454864502, 0.4350188374519348, 0.5878617763519287, -2.379284381866455, 0.4093063771724701, 0.5906034111976624, -2.379329204559326, 0.3859052360057831, 0.5936904549598694, -2.3816752433776855, 0.6451863050460815, 0.5760282874107361, -1.7391208410263062, 0.37957149744033813, 0.613665759563446, -1.6802221536636353, 0.5562983155250549, 0.768756091594696, -2.168328046798706, 0.446087509393692, 0.7814559936523438, -2.1547014713287354, 0.897433876991272, 0.9848420023918152, -1.1115385293960571, 0.22372905910015106, 1.0027906894683838, -0.9806157350540161, 1.1856918334960938, 1.4132179021835327, -1.3539308309555054, 0.09906371682882309, 1.5030152797698975, -0.4306906759738922, 0.9959349632263184, 1.4609495401382446, -2.0149855613708496, 0.2056393176317215, 1.7834821939468384, -0.6638708710670471, 0.956013560295105, 1.5213220119476318, -2.1659908294677734, 0.24038751423358917, 1.9183323383331299, -0.7553867101669312, 0.9074621200561523, 1.4460116624832153, -2.1617236137390137, 0.2567214071750641, 1.8650397062301636, -0.7960097193717957, 0.9091817140579224, 1.4232356548309326, -2.0317635536193848, 0.2558407187461853, 1.8124433755874634, -0.6901748776435852, 0.8031676411628723, 2.1156694889068604, -0.1563624143600464, 0.3782728314399719, 2.120152235031128, 0.16353821754455566, 0.7946868538856506, 2.9163777828216553, -0.39951735734939575, 0.41531285643577576, 2.8784191608428955, -0.3844040334224701, 0.8373422622680664, 3.727404832839966, 0.414510577917099, 0.46270933747291565, 3.7224957942962646, 0.2116076499223709, 0.8621425628662109, 3.861377239227295, 0.44427886605262756, 0.4703764021396637, 3.8577492237091064, 0.23229913413524628, 0.7761837840080261, 4.001626491546631, -0.49837636947631836, 0.5018725395202637, 3.9975955486297607, -0.781531572341919]
+
+    if posture not in posture_map:
+        print({'status': 'error', 'message': 'Unknown posture'})
+        return
+
+    input_np = np.array(mediapipe)
+    feedback = {
+        'landmarks': landmark_logic(posture, input_np),
+        'angles': angle_logic(posture, input_np)
+    }
+    print({'status': 'success', 'feedback': feedback})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # app.run(host='0.0.0.0', port=5000, debug=True)
+    main()
