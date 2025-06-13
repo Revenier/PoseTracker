@@ -38,5 +38,3 @@ def pushup_angles(input_angles):
         return "Angles look good!"
     else:
         return "Check your joint angles!"
-
-        #ttest
