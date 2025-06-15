@@ -1,48 +1,8 @@
-# import pickle
-# import numpy as np
-# from sklearn.preprocessing import normalize
-# from sklearn.metrics.pairwise import cosine_similarity
-# import os
-
-# base_dir = os.path.dirname(os.path.abspath(__file__))
-# pickles_dir = os.path.join(base_dir, '../app/pickles')
-
-# def pushup_landmarks(input_landmarks):
-#     """
-#     Compares input_landmarks (1D numpy array) to push-up reference using cosine similarity.
-#     Returns feedback string.
-#     """
-#     with open(os.path.join(pickles_dir, 'push_up_landmarks.pkl'), 'rb') as f:
-#         ref_df = pickle.load(f)
-#     ref = ref_df.drop(['vid_id', 'frame_order'], axis=1, errors='ignore').values
-#     ref_norm = normalize(ref, axis=1)
-#     input_norm = normalize([input_landmarks], axis=1)
-#     sims = cosine_similarity(input_norm, ref_norm)[0]
-#     best_score = np.max(sims)
-#     if best_score > 0.95:
-#         return "Correct form!"
-#     else:
-#         return "Leg should be wider."  # Example feedback
-
-# def pushup_angles(input_angles):
-#     """
-#     Compares input_angles (1D numpy array) to push-up reference using MAE.
-#     Returns feedback string.
-#     """
-#     with open(os.path.join(pickles_dir, 'push_up_angles.pkl'), 'rb') as f:
-#         ref_df = pickle.load(f)
-#     ref = ref_df.drop(['vid_id', 'frame_order'], axis=1, errors='ignore').values
-#     mae = np.mean(np.abs(ref - input_angles), axis=1)
-#     best_mae = np.min(mae)
-#     if best_mae < 10:
-#         return "Angles look good!"
-#     else:
-#         return "Check your joint angles!"
-
 import pickle
 import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics import mean_absolute_error
 import os
 import pandas as pd
 
@@ -66,30 +26,57 @@ def safe_drop_columns(df, columns_to_drop):
             numeric_cols = df.select_dtypes(include=[np.number]).columns
             return df[numeric_cols]
 
+def validate_pickle_file(pickle_path, expected_type="DataFrame"):
+    """
+    Validate that pickle file exists and can be loaded properly.
+    
+    Args:
+        pickle_path: Path to pickle file
+        expected_type: Expected type of pickled object
+    
+    Returns:
+        tuple: (success: bool, data: object, error_message: str)
+    """
+    if not os.path.exists(pickle_path):
+        return False, None, f"Pickle file not found: {pickle_path}"
+    
+    try:
+        with open(pickle_path, 'rb') as f:
+            data = pickle.load(f)
+        
+        if expected_type == "DataFrame" and not isinstance(data, pd.DataFrame):
+            return False, None, f"Expected DataFrame, got {type(data)}"
+        
+        if isinstance(data, pd.DataFrame) and data.empty:
+            return False, None, "DataFrame is empty"
+        
+        return True, data, ""
+    
+    except Exception as e:
+        return False, None, f"Failed to load pickle: {str(e)}"
+
 def pushup_landmarks(input_landmarks):
     """
     Compares input_landmarks (1D numpy array) to push-up reference using cosine similarity.
     Returns detailed feedback with score.
     
     Args:
-        input_landmarks: numpy array of 99 landmark coordinates (33 points * 3 coords)
+        input_landmarks: numpy array of landmark coordinates
     
     Returns:
         dict: Contains feedback message and similarity score
     """
     try:
-        # Load reference data
+        # Load and validate reference data
         pickle_path = os.path.join(pickles_dir, 'push_up_landmarks.pkl')
+        success, ref_df, error_msg = validate_pickle_file(pickle_path)
         
-        if not os.path.exists(pickle_path):
+        if not success:
             return {
-                "message": f"Reference file not found: {pickle_path}",
+                "message": error_msg,
                 "similarity_score": 0.0,
                 "error": True
             }
-        
-        with open(pickle_path, 'rb') as f:
-            ref_df = pickle.load(f)
         
         # print(f"Loaded reference data shape: {ref_df.shape}")
         # print(f"Reference columns: {list(ref_df.columns)}")
@@ -105,13 +92,21 @@ def pushup_landmarks(input_landmarks):
         if len(input_landmarks.shape) == 1:
             input_landmarks = input_landmarks.reshape(1, -1)
         
-        # Check if dimensions match
+        # Handle dimension mismatch
         if ref.shape[1] != input_landmarks.shape[1]:
-            return {
-                "message": f"Dimension mismatch: reference has {ref.shape[1]} features, input has {input_landmarks.shape[1]}",
-                "similarity_score": 0.0,
-                "error": True
-            }
+            # Try to pad or truncate to match dimensions
+            ref_dims = ref.shape[1]
+            input_dims = input_landmarks.shape[1]
+            
+            if input_dims < ref_dims:
+                # Pad input with zeros
+                padding = np.zeros((input_landmarks.shape[0], ref_dims - input_dims))
+                input_landmarks = np.hstack([input_landmarks, padding])
+                # print(f"Padded input from {input_dims} to {ref_dims} dimensions")
+            elif input_dims > ref_dims:
+                # Truncate input
+                input_landmarks = input_landmarks[:, :ref_dims]
+                # print(f"Truncated input from {input_dims} to {ref_dims} dimensions")
         
         # Normalize both reference and input data
         ref_norm = normalize(ref, axis=1)
@@ -138,7 +133,9 @@ def pushup_landmarks(input_landmarks):
             "message": feedback,
             "similarity_score": float(best_score),
             "best_match_frame": int(best_match_idx),
-            "total_references": len(ref)
+            "total_references": len(ref),
+            "input_dimensions": input_landmarks.shape[1],
+            "reference_dimensions": ref.shape[1]
         }
         
     except Exception as e:
@@ -164,18 +161,16 @@ def pushup_angles(input_angles):
         dict: Contains feedback message and error metrics
     """
     try:
-        # Load reference data
+        # Load and validate reference data
         pickle_path = os.path.join(pickles_dir, 'push_up_angles.pkl')
+        success, ref_df, error_msg = validate_pickle_file(pickle_path)
         
-        if not os.path.exists(pickle_path):
+        if not success:
             return {
-                "message": f"Reference file not found: {pickle_path}",
+                "message": error_msg,
                 "mae_score": float('inf'),
                 "error": True
             }
-        
-            with open(pickle_path, 'rb') as f:
-                ref_df = pickle.load(f)
         
         # print(f"Loaded angles reference data shape: {ref_df.shape}")
         # print(f"Angles reference columns: {list(ref_df.columns)}")
@@ -190,16 +185,24 @@ def pushup_angles(input_angles):
         # Ensure input is numpy array
         input_angles = np.array(input_angles)
         
-        # Check if dimensions match
+        # Handle dimension mismatch
         if ref.shape[1] != len(input_angles):
-            return {
-                "message": f"Angle dimension mismatch: reference has {ref.shape[1]} angles, input has {len(input_angles)}",
-                "mae_score": float('inf'),
-                "error": True
-            }
+            ref_dims = ref.shape[1]
+            input_dims = len(input_angles)
+            
+            if input_dims < ref_dims:
+                # Pad input with average of existing angles
+                avg_angle = np.mean(input_angles) if len(input_angles) > 0 else 90.0
+                padding = np.full(ref_dims - input_dims, avg_angle)
+                input_angles = np.concatenate([input_angles, padding])
+                # print(f"Padded angles from {input_dims} to {ref_dims} dimensions")
+            elif input_dims > ref_dims:
+                # Truncate input
+                input_angles = input_angles[:ref_dims]
+                # print(f"Truncated angles from {input_dims} to {ref_dims} dimensions")
         
         # Calculate Mean Absolute Error for each reference pose
-        mae_scores = np.mean(np.abs(ref - input_angles), axis=1)
+        mae_scores = [mean_absolute_error(reference_pose, input_angles) for reference_pose in ref]
         best_mae = np.min(mae_scores)
         best_match_idx = np.argmin(mae_scores)
         
@@ -234,10 +237,10 @@ def pushup_angles(input_angles):
         
         # Identify problematic angles (difference > 15 degrees)
         problematic_angles = []
-        for i, (angle_name, diff) in enumerate(zip(angle_names[:len(input_angles)], angle_differences)):
-            if diff > 15:
+        for i, diff in enumerate(angle_differences):
+            if i < len(angle_names) and diff > 15:
                 problematic_angles.append({
-                    "angle": angle_name,
+                    "angle": angle_names[i],
                     "your_angle": float(input_angles[i]),
                     "reference_angle": float(best_ref[i]),
                     "difference": float(diff)
@@ -249,17 +252,18 @@ def pushup_angles(input_angles):
             "mae_score": float(best_mae),
             "best_match_frame": int(best_match_idx),
             "total_references": len(ref),
-            "problematic_angles": problematic_angles
+            "problematic_angles": problematic_angles,
+            "input_dimensions": len(input_angles),
+            "reference_dimensions": ref.shape[1]
         }
         
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
-        print(f"Error in pushup_angles: {error_details}")
+        # print(f"Error in pushup_angles: {error_details}")
         return {
             "message": f"Error in angle analysis: {str(e)}",
             "mae_score": float('inf'),
             "error": True,
             "debug_info": error_details
         }
-
