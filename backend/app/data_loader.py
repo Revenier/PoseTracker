@@ -6,8 +6,14 @@ pickles_dir = os.path.join(base_dir, '../app/pickles')
 
 
 def load_pickle(filename):
-    with open(os.path.join(pickles_dir, filename), 'rb') as f:
-        return pickle.load(f)
+    path = os.path.join(pickles_dir, filename)
+    try:
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+    except Exception as e:
+        print(f"Failed to load pickle {filename}: {e}")
+        return None
+
 
 def pushup_landmarks():
     return load_pickle('push_up_landmarks.pkl')
