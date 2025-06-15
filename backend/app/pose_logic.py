@@ -174,8 +174,8 @@ def pushup_angles(input_angles):
                 "error": True
             }
         
-        with open(pickle_path, 'rb') as f:
-            ref_df = pickle.load(f)
+            with open(pickle_path, 'rb') as f:
+                ref_df = pickle.load(f)
         
         # print(f"Loaded angles reference data shape: {ref_df.shape}")
         # print(f"Angles reference columns: {list(ref_df.columns)}")
