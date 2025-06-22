@@ -28,6 +28,8 @@ def landmark_logic(posture, input_landmarks):
 def calculate_angle(a, b, c):
     ba = a - b
     bc = c - b
+    if np.linalg.norm(ba) == 0 or np.linalg.norm(bc) == 0:
+        return 0.0  # or np.nan, or skip this angle
     cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
     angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
     return np.degrees(angle)
@@ -54,25 +56,31 @@ def angle_logic(posture, input_data):
         (16, 14, 12),  # right_wrist, right_elbow, right_shoulder
         (15, 13, 11),  # left_wrist, left_elbow, left_shoulder
     ]
+
+    angle_names = [
+        "right elbow", "left elbow", "right knee", "right hip", "left hip", "right wrist", "left wrist"
+    ]
+
     input_angles = []
     for a, b, c in angle_indices:
         input_angles.append(calculate_angle(landmarks[a], landmarks[b], landmarks[c]))
     input_angles = np.array(input_angles)
 
-    # 5. Normalize data
-    input_norm = normalize([input_angles], axis=1)
-
-    # 6. Cosine similarity with reference angles
     ref_angles_func = dl.posture_map[posture]['angles']
     ref_angles = ref_angles_func()  # shape: (N, num_angles)
-    ref_norm = normalize(ref_angles, axis=1)
-    if input_norm.shape[1] != ref_norm.shape[1]:
-        return {'status': 'error', 'message': f'Input and reference angle dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}'}
-    sims = cosine_similarity(input_norm, ref_norm)[0]
-    best_score = np.max(sims)
+    ref_mean = np.mean(ref_angles, axis=0)  # average reference for each angle
 
-    # 7. Return result
-    if best_score > 0.95:
-        return "Correct posture!"
+    # Find the angle with the largest error
+    diffs = np.abs(input_angles - ref_mean)
+    max_idx = np.argmax(diffs)
+    max_diff = diffs[max_idx]
+    suggestion = None
+    if max_diff > 15:  # threshold for "wrong"
+        suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {ref_mean[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
+
+    # ...rest of your similarity logic...
+    # If wrong posture, return suggestion
+    if suggestion:
+        return f"Incorrect posture, try again! {suggestion}"
     else:
-        return "Incorrect posture, try again!"
+        return "Correct posture!"
