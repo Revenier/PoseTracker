@@ -1,8 +1,8 @@
-import pickle
 import os
+import pickle
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-pickles_dir = os.path.join(base_dir, '../app/pickles')
+pickles_dir = os.path.join(base_dir, 'pickles')
 
 def load_pickle(filename):
     with open(os.path.join(pickles_dir, filename), 'rb') as f:
@@ -15,10 +15,10 @@ def pushup_angles():
     return load_pickle('push_up_angles.pkl')
 
 def situp_landmarks():
-    return load_pickle('situp_landmarks.pkl')
+    return load_pickle('sit_up_landmarks.pkl')
 
 def situp_angles():
-    return load_pickle('situp_angles.pkl')
+    return load_pickle('sit_up_angles.pkl')
 
 def squat_landmarks():
     return load_pickle('squat_landmarks.pkl')
@@ -27,17 +27,16 @@ def squat_angles():
     return load_pickle('squat_angles.pkl')
 
 def pullup_landmarks():
-    return load_pickle('pullup_landmarks.pkl')
+    return load_pickle('pull_up_landmarks.pkl')
 
 def pullup_angles():
-    return load_pickle('pullup_angles.pkl')
+    return load_pickle('pull_up_angles.pkl')
 
 def jumping_jack_landmarks():
     return load_pickle('jumping_jack_landmarks.pkl')
 
 def jumping_jack_angles():
     return load_pickle('jumping_jack_angles.pkl')
-
 
 posture_map = {
     'push_up': {

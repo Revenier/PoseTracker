@@ -1,0 +1,3 @@
+cd ke backend
+pip install -r requirements.txt
+
