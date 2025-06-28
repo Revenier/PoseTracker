@@ -9,26 +9,25 @@ from app.data_loader import posture_map
 app = Flask(__name__)
 CORS(app)
 
-# @app.route('/pose', methods=['POST'])
-# def receive_pose():
-#     data = request.get_json()
-#     posture = data.get('posture')
-#     mediapipe = data.get('mediapipe', [])
+@app.route('/pose', methods=['POST'])
+def receive_pose():
+    data = request.get_json()
+    posture = data.get('posture')
+    mediapipe = data.get('mediapipe', [])
 
-#     if posture not in posture_map:
-#         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
+    if posture not in posture_map:
+        return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
 
-#     feedback = {}
+    feedback = {}
+    if mediapipe:
+        input_np = np.array(mediapipe)
+        feedback['landmarks'] = landmark_logic(posture, input_np)
+        feedback['angles'] = angle_logic(posture, input_np)
 
-#     if mediapipe:
-#         input_np = np.array(mediapipe)
-#         feedback['landmarks'] = landmark_logic(posture, input_np)
-#         feedback['angles'] = angle_logic(posture, input_np)  # If you want to use the same input for angles
-
-#     return jsonify({
-#         'status': 'success',
-#         'feedback': feedback
-#     }), 200
+    return jsonify({
+        'status': 'success',
+        'feedback': feedback
+    }), 200
 
 def main():
     # Example input
@@ -73,5 +72,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # app.run(host='0.0.0.0', port=5000, debug=True)
-    main()
+    app.run(host='0.0.0.0', port=5000, debug=True)
+    # main()
