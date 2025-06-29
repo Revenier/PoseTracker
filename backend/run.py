@@ -12,6 +12,7 @@ CORS(app)
 @app.route('/pose', methods=['POST'])
 def receive_pose():
     data = request.get_json()
+    print(f"Received data: {data}")
     posture = data.get('posture')
     mediapipe = data.get('mediapipe', [])
 
@@ -23,6 +24,8 @@ def receive_pose():
         input_np = np.array(mediapipe)
         feedback['landmarks'] = landmark_logic(posture, input_np)
         feedback['angles'] = angle_logic(posture, input_np)
+
+    print({'feedback': feedback})
 
     return jsonify({
         'status': 'success',
