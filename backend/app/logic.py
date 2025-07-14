@@ -14,6 +14,7 @@ def landmark_logic(posture, input_landmarks):
 
     input_norm = normalize([input_landmarks], axis=1)
     ref_landmarks_func = dl.posture_map[posture]['landmarks']
+    # 3. Get reference landmarks and normalize them
     ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
     ref_norm = normalize(ref_landmarks, axis=1)
     if input_norm.shape[1] != ref_norm.shape[1]:

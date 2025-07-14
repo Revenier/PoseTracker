@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 import os
+from sklearn.preprocessing import MinMaxScaler, normalize
 
 # Get absolute paths for data files
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -9,7 +10,7 @@ labels_path = os.path.abspath(os.path.join(base_dir, '../../data/labels.csv'))
 landmarks_path = os.path.abspath(os.path.join(base_dir, '../../data/landmarks.csv'))
 
 # Output directory (absolute path)
-output_dir = os.path.join(base_dir, 'pickles')
+output_dir = os.path.join(base_dir, 'pickle')
 os.makedirs(output_dir, exist_ok=True)
 
 # Load data
@@ -36,9 +37,42 @@ for posture in postures:
     # For landmarks, drop 'vid_id' and 'frame_order' if present
     landmark_cols = [col for col in landmarks_posture.columns if col not in ['vid_id', 'frame_order']]
     landmarks_only = landmarks_posture[landmark_cols].values
+    
+    # Normalize angles (feature-wise)
+    scaler = MinMaxScaler()
+    angles_norm = scaler.fit_transform(angles_only)
+
+    # Normalize landmarks (row-wise)
+    landmarks_norm = normalize(landmarks_only, axis=1)
 
     # Save as pickle (just the numpy arrays)
     with open(os.path.join(output_dir, f'{posture}_angles.pkl'), 'wb') as f:
         pickle.dump(angles_only, f)
     with open(os.path.join(output_dir, f'{posture}_landmarks.pkl'), 'wb') as f:
         pickle.dump(landmarks_only, f)
+        
+        
+# Example
+# 
+# angles = np.array([
+#     [30, 60, 90],
+#     [45, 75, 105],
+#     [60, 90, 120]
+# ])
+# scaler = MinMaxScaler()
+# angles_norm = scaler.fit_transform(angles)
+# print(angles_norm)
+# Output:
+# [[0.  0.  0. ]
+#  [0.5 0.5 0.5]
+#  [1.  1.  1. ]]
+
+# landmarks = np.array([
+#     [1, 2, 2],
+#     [3, 0, 4]
+# ])
+# landmarks_norm = normalize(landmarks, axis=1)
+# print(landmarks_norm)
+# Output:
+# [[0.333 0.667 0.667]
+#  [0.6   0.    0.8  ]]

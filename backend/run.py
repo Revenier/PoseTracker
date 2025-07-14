@@ -14,7 +14,8 @@ def receive_pose():
     data = request.get_json()
     print(f"Received data: {data}")
     posture = data.get('posture')
-    mediapipe = data.get('mediapipe', [])
+    mediapipe = data.get('mediapipe', []) 
+    # ini skrng cuma 1 data. kita maunya bebreapa data. list of array
 
     if posture not in posture_map:
         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
