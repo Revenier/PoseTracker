@@ -69,39 +69,20 @@ def angle_logic(posture, input_data):
 
     ref_angles_func = dl.posture_map[posture]['angles']
     ref_angles = ref_angles_func()  # shape: (N, num_angles)
-    ref_mean = np.mean(ref_angles, axis=0)  # average reference for each angle
 
-    # Find the angle with the largest error
-    # diffs = np.abs(input_angles - ref_mean)
-    # max_idx = np.argmax(diffs)
-    # max_diff = diffs[max_idx]
-    # suggestion = None
-    # if max_diff > 15:  # threshold for "wrong"
-    #     suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {ref_mean[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
-
-
-    # # If wrong posture, return suggestion
-    # if suggestion:
-    #     return f"Incorrect posture, try again! {suggestion}"
-    # else:
-    #     return "Correct posture!"
-
-    # Find differences for all angles
-    diffs = np.abs(input_angles - ref_mean)
+    # Find the closest reference frame (smallest total angle difference)
+    diffs_all = np.abs(ref_angles - input_angles)
+    sum_diffs = np.sum(diffs_all, axis=1)
+    best_idx = np.argmin(sum_diffs)
+    best_ref = ref_angles[best_idx]
+    diffs = np.abs(input_angles - best_ref)
     wrong_indices = np.where(diffs > 15)[0]  # threshold for "wrong"
 
     if len(wrong_indices) >= 3:
         return f"You're not doing a {posture.replace('_', ' ')}. Please check your form."
     elif len(wrong_indices) > 0:
-        # Suggest the joint with the largest error
         max_idx = wrong_indices[np.argmax(diffs[wrong_indices])]
-        suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {ref_mean[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
+        suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {best_ref[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
         return f"Incorrect posture, try again! {suggestion}"
     else:
         return "Correct posture!"
-
-# Example usage: FE
-        # 170, 40, 160, 100, 170
-        #  |    <   |    <   | 
-
-        # 150-180, 30-50, 150-180, 30-50, 150-180
