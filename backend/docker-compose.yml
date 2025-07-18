@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: fitpipe-python
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+    restart: always
+
+  redis:
+    image: redis:latest
+    container_name: fitpipe-redis
+    ports:
+      - "6379:6379"
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    mem_limit: 300mb

@@ -5,6 +5,7 @@ import numpy as np
 from app.logic import landmark_logic, angle_logic
 from app import data_loader as dl
 from app.data_loader import posture_map
+from app.redis_client import get_or_cache_result
 
 app = Flask(__name__)
 CORS(app)
@@ -12,25 +13,46 @@ CORS(app)
 @app.route('/pose', methods=['POST'])
 def receive_pose():
     data = request.get_json()
-    print(f"Received data: {data}")
+    #print(f"Received data: {data}")
     posture = data.get('posture')
     mediapipe = data.get('mediapipe', [])
 
     if posture not in posture_map:
         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
 
-    feedback = {}
-    if mediapipe:
-        input_np = np.array(mediapipe)
-        feedback['landmarks'] = landmark_logic(posture, input_np)
-        feedback['angles'] = angle_logic(posture, input_np)
+    input_np = np.array(mediapipe)
 
-    print({'feedback': feedback})
+    feedback = {}
+    feedback['angles'] = get_or_cache_result((posture, input_np), angle_logic)
+    feedback['landmarks'] = get_or_cache_result((posture, input_np), landmark_logic)
+
 
     return jsonify({
         'status': 'success',
         'feedback': feedback
     }), 200
+
+# def receive_pose():
+#     data = request.get_json()
+#     print(f"Received data: {data}")
+#     posture = data.get('posture')
+#     mediapipe = data.get('mediapipe', [])
+
+#     if posture not in posture_map:
+#         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
+
+#     feedback = {}
+#     if mediapipe:
+#         input_np = np.array(mediapipe)
+#         feedback['landmarks'] = landmark_logic(posture, input_np)
+#         feedback['angles'] = angle_logic(posture, input_np)
+
+#     print({'feedback': feedback})
+
+#     return jsonify({
+#         'status': 'success',
+#         'feedback': feedback
+#     }), 200
 
 def main():
     # Example input
