@@ -25,7 +25,7 @@ def receive_pose():
     feedback = {}
     feedback['angles'] = get_or_cache_result((posture, input_np), angle_logic)
     feedback['landmarks'] = get_or_cache_result((posture, input_np), landmark_logic)
-
+    
 
     return jsonify({
         'status': 'success',
