@@ -54,8 +54,7 @@ def receive_pose():
     print({'feedback': feedback})
 
     return jsonify({
-        'status': 'success',
-        'correct': PostureCorrect,
+        'status': PostureCorrect,
         'feedback': feedback
     }), 200
 
