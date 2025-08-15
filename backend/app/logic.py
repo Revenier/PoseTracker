@@ -35,6 +35,29 @@ def calculate_angle(a, b, c):
     angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
     return np.degrees(angle)
 
+def align_landmarks(landmarks):
+    # landmarks: (33, 3) array
+    left_shoulder = landmarks[11][:2]
+    right_shoulder = landmarks[12][:2]
+    center = (left_shoulder + right_shoulder) / 2
+
+    # Vector from right to left shoulder
+    shoulder_vec = left_shoulder - right_shoulder
+    angle = np.arctan2(shoulder_vec[1], shoulder_vec[0])
+    rotation = -angle  # rotate so shoulders are horizontal
+
+    # Rotation matrix
+    rot_matrix = np.array([
+        [np.cos(rotation), -np.sin(rotation)],
+        [np.sin(rotation),  np.cos(rotation)]
+    ])
+
+    # Center and rotate all (x, y)
+    xy = landmarks[:, :2] - center
+    xy_rot = xy @ rot_matrix.T
+    aligned = np.hstack([xy_rot, landmarks[:, 2:3]])
+    return aligned
+
 def angle_logic(posture, input_data):
     # 1. Check if the posture is valid
     if posture not in dl.posture_map:
@@ -46,6 +69,7 @@ def angle_logic(posture, input_data):
 
     # 3. Group into (33, 3) array
     landmarks = np.array(input_data).reshape((33, 3))
+    landmarks = align_landmarks(landmarks)
 
     # 4. Calculate angles for specific joints (example indices)
     angle_indices = [

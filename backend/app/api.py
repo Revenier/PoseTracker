@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from data_loader import pushup_landmarks, jumping_jack_landmarks, situp_landmarks, squat_landmarks, pullup_landmarks
+from data_load import pushup_landmarks
 
-all_lines = jumping_jack_landmarks()  # shape: (N, 99)
+all_lines = pushup_landmarks()  # shape: (N, 99)
 batch_size = 100
-output_dir = "jumping_jack_pose"
+output_dir = "align_pose2"
 os.makedirs(output_dir, exist_ok=True)
 
 POSE_CONNECTIONS = [
