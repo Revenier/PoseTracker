@@ -42,17 +42,20 @@ def receive_pose():
 
     if all_good:
         feedback = "Good pose!"
+        PostureCorrect = True
     else:
         # Join all feedbacks in a line if any is bad
         feedback = " | ".join(
             f"Sample {i+1}: landmarks: {fb['landmarks']}, angles: {fb['angles']}"
             for i, fb in enumerate(feedback_list)
         )
+        PostureCorrect = False
 
     print({'feedback': feedback})
 
     return jsonify({
         'status': 'success',
+        'correct': PostureCorrect,
         'feedback': feedback
     }), 200
 
