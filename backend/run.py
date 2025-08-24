@@ -19,6 +19,12 @@ def receive_pose():
 
     if posture not in posture_map:
         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
+    
+    # input_np = np.array(mediapipe)
+
+    # feedback = {}
+    # feedback['angles'] = get_or_cache_result((posture, input_np), angle_logic)
+    # feedback['landmarks'] = get_or_cache_result((posture, input_np), landmark_logic)
 
     feedback_list = []
     for sample in mediapipe:
