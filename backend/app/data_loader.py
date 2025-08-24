@@ -2,7 +2,7 @@ import os
 import pickle
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-pickles_dir = os.path.join(base_dir, 'pickles')
+pickles_dir = os.path.join(base_dir, 'pickle')
 
 def load_pickle(filename):
     with open(os.path.join(pickles_dir, filename), 'rb') as f:
@@ -15,10 +15,10 @@ def pushup_angles():
     return load_pickle('push_up_angles.pkl')
 
 def situp_landmarks():
-    return load_pickle('sit_up_landmarks.pkl')
+    return load_pickle('situp_landmarks.pkl')
 
 def situp_angles():
-    return load_pickle('sit_up_angles.pkl')
+    return load_pickle('situp_angles.pkl')
 
 def squat_landmarks():
     return load_pickle('squat_landmarks.pkl')
