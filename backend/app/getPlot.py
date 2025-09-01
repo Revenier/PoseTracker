@@ -1,7 +1,7 @@
 from data_loader import pushup_landmarks
 
 # Indices you want to print
-indices = [211, 228, 217]
+indices = [208, 209, 210, 211, 212, 213, 214, 215, 216, 217]
 
 # Load all push-up landmark data
 all_lines = pushup_landmarks()
@@ -14,4 +14,4 @@ for idx, obj in zip(indices, selected):
     print()  # Blank line between objects
 
 # If you want as a list of lists:
-print(selected)
+#print(selected)
