@@ -1,4 +1,5 @@
-from app import data_loader as dl
+#from app import data_loader as dl
+from app import data_loader_csv as dl
 import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
