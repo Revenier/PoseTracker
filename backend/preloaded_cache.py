@@ -27,6 +27,7 @@ print(f"→ Total: {len(angles_array)} angle frames")
 print(f"→ Total: {len(landmarks_array)} landmark frames\n")
 
 print("Preloading LANDMARK frames:\n")
+# TODO: Redis boleh simpen data mentahan dr csv aja ga usah ada logic
 # for i, frame in enumerate(landmarks_array[:PRINT_LIMIT]):
 for i, frame in enumerate(landmarks_array): # Kalau mau semua
     frame = np.array(frame, dtype=np.float64)

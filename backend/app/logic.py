@@ -3,6 +3,18 @@ from app import data_loader_csv as dl
 import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
+import redis, json, numpy as np
+
+r = redis.Redis(host='localhost', port=6379, db=0)
+
+# TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
+def get_ref_from_redis(posture, data_type):
+    key = f"{posture}:{data_type}:ref"
+    data = r.get(key)
+    if data is None:
+        raise Exception("Reference data not found in Redis")
+    arr = np.array(json.loads(data))
+    return arr  # shape (N, 99)
 
 def landmark_logic(posture, input_landmarks):
     # 1. Check if the posture is valid
@@ -14,7 +26,9 @@ def landmark_logic(posture, input_landmarks):
         return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
 
     input_norm = normalize([input_landmarks], axis=1)
-    ref_landmarks_func = dl.posture_map[posture]['landmarks']
+    # TODO: (DONE) (NEED CHECK) ref_landmarks_func should be load from redis cache
+    # ref_landmarks_func = dl.posture_map[posture]['landmarks']
+    ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
     # 3. Get reference landmarks and normalize them
     ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
     ref_norm = normalize(ref_landmarks, axis=1)
@@ -92,7 +106,9 @@ def angle_logic(posture, input_data):
         input_angles.append(calculate_angle(landmarks[a], landmarks[b], landmarks[c]))
     input_angles = np.array(input_angles)
 
-    ref_angles_func = dl.posture_map[posture]['angles']
+    # TODO: (DONE) (NEED CHECK)  ref_angles_func should be load from redis cache
+    # ref_angles_func = dl.posture_map[posture]['angles']
+    ref_angles_func = get_ref_from_redis(posture, 'angles')
     ref_angles = ref_angles_func()  # shape: (N, num_angles)
 
     # Find the closest reference frame (smallest total angle difference)
