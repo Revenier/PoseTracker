@@ -3,10 +3,8 @@ import os
 import pickle
 import hashlib
 import time
-from dotenv import load_dotenv, find_dotenv
 import numpy as np, time
 
-load_dotenv(find_dotenv())
 
 """" Versi test di postman satu landmark """
 
@@ -55,6 +53,7 @@ def get_or_cache_result(args, processing_func):
     cached = r.get(cache_key)
     if cached:
         try:
+            # TODO: tolong cek ini beneran load dr pickle ga. 
             obj = pickle.loads(cached)
             used_human = r.info().get("used_memory_human", "unknown")
             print(
@@ -68,7 +67,8 @@ def get_or_cache_result(args, processing_func):
 
     # --- Cache MISS -> proses & simpan ---
     t0 = time.perf_counter()
-    result = processing_func(posture, arr)
+    # Proses data by logic function
+    result = processing_func(posture, arr) 
 
     try:
         cache_obj = {"posture": posture, "mediapipe": arr, "output": result}
