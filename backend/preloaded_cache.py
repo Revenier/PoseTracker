@@ -1,27 +1,22 @@
 # Script ini memuat data pickle hasil training (landmark dan angle) ke dalam Redis untuk mempercepat akses saat inferensi
 
-from app.data_loader import pushup_angles, pushup_landmarks
+from app.data_loader_csv import pushup_angles, pushup_landmarks
 from app.logic import angle_logic, landmark_logic
 from app.redis_client import get_or_cache_result
 import numpy as np
 
 """
-Jika Pakai Lokal / Docker
 1. Pastikan docker udah jalan
 2. Pastikan code di redis_client.py udah diubah ke versi docker
 3. Untuk run di terminal pakai command
     docker exec -it fitpipe-python python preloaded_cache.py
 
-Jika Pakai Cloud
-1. Pastikan code di redis_client.py udah diubah ke versi Cloud
-2. untuk run di terminal pakai command
-    python preloaded_cache.py
 """
 
 POSTURE = 'push_up'
 
 # Batas jumlah frame yang mau disimpen ke redis
-PRINT_LIMIT = 10
+# PRINT_LIMIT = 10
 
 print(f"\nMulai preload posture: {POSTURE}\n")
 
@@ -32,15 +27,15 @@ print(f"→ Total: {len(angles_array)} angle frames")
 print(f"→ Total: {len(landmarks_array)} landmark frames\n")
 
 print("Preloading LANDMARK frames:\n")
-for i, frame in enumerate(landmarks_array[:PRINT_LIMIT]):
-#for i, frame in enumerate(landmarks_array): # Kalau mau semua
+# for i, frame in enumerate(landmarks_array[:PRINT_LIMIT]):
+for i, frame in enumerate(landmarks_array): # Kalau mau semua
     frame = np.array(frame, dtype=np.float64)
     result = get_or_cache_result((POSTURE, frame), landmark_logic)
     print(f"[LANDMARK {i+1}] Result: {result}")
 
 print("\nPreloading ANGLE frames (dihitung dari landmark):\n")
-for i, frame in enumerate(landmarks_array[:PRINT_LIMIT]):
-#for i, frame in enumerate(landmarks_array): # Kalau mau semua
+# for i, frame in enumerate(landmarks_array[:PRINT_LIMIT]):
+for i, frame in enumerate(landmarks_array): # Kalau mau semua
     frame = np.array(frame, dtype=np.float64)
     result = get_or_cache_result((POSTURE, frame), angle_logic)
     print(f"[ANGLE {i+1}] Result: {result}")

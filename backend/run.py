@@ -21,27 +21,40 @@ def receive_pose():
 
     if posture not in posture_map:
         return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
-    
+
+
+    """ Versi batch dengan Redis docker lokal  """
+
+    # Buat Debugging
+    # print("\n=== POSTMAN INPUT ===")
+    # print(f"posture   : {posture}")
+
+    # for idx, sample in enumerate(mediapipe):
+    #     print(f"\nSample {idx} (len={len(sample)}):")
+    #     for i, val in enumerate(sample):
+    #         end_char = "\n" if (i + 1) % 10 == 0 else " "
+    #         print(f"{val:.4f}", end=end_char)
+    #     print()  # extra newline per sample
+
+    # print("=== END INPUT ===\n")
 
 
 
-    
-    """ Versi batch dengan Redis Cloud """
 
     # Wajib list-of-arrays [99]
     if not (isinstance(mediapipe, (list, tuple)) and mediapipe and isinstance(mediapipe[0], (list, tuple))):
         return jsonify({'status': 'error', 'message': 'mediapipe must be a list of 99-length arrays'}), 400
 
-    #  Validasi panjang 99 biar error rapi
+    #  Validasi input batch: wajib list-of-arrays, tiap array panjang 99
     bad_idx = [i for i, s in enumerate(mediapipe) if not isinstance(s, (list, tuple)) or len(s) != 99]
     if bad_idx:
         return jsonify({'status': 'error', 'message': f'each sample must have 99 values; bad indices: {bad_idx}'}), 400
 
-    # Proses batch via Redis Cloud
+    # 3) Proses batch via Redis lokal (flow key & log masih “landmark/angle”)
     angle_outs    = get_or_cache_result_batch(posture, mediapipe, angle_logic)
     landmark_outs = get_or_cache_result_batch(posture, mediapipe, landmark_logic)
 
-    # Gabungkan per-sample
+    # 4) Satukan hasil per-sample
     details = [
         {'index': i, 'angles': a, 'landmarks': l}
         for i, (a, l) in enumerate(zip(angle_outs, landmark_outs))
@@ -52,38 +65,6 @@ def receive_pose():
         'batch': True,
         'details': details
     }), 200
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-    """ Versi Jo """
-    # input_np = np.array(mediapipe)
-    # feedback = {}
-    # feedback['angles'] = get_or_cache_result((posture, input_np), angle_logic)
-    # feedback['landmarks'] = get_or_cache_result((posture, input_np), landmark_logic)
-    # return jsonify({
-    #     'status': 'success',
-    #     'feedback': feedback
-    # }), 200
-
-
-
-
-
-
-
-
-
 
 
 
@@ -173,28 +154,6 @@ def main():
     # Example input
     posture = "push_up"
 
-    """ Versi Jo"""
-    """ Perlu Postman tapi perlu aktifin app.run dan matiin main() """
-
-    # mediapipe = [0.0000] * 99
-    
-    # if posture not in posture_map:
-    #     print({'status': 'error', 'message': 'Unknown posture'})
-    #     return
-
-    # input_np = np.array(mediapipe)
-    # feedback = {
-    #     'landmarks': landmark_logic(posture, input_np),
-    #     'angles': angle_logic(posture, input_np)
-    # }
-    # print({'status': 'success', 'feedback': feedback})
-
-    
-    
-    
-    
-    
-    
     """ Versi Mitta"""
     """ Gk perlu Postman tapi perlu aktifin main() dan matiin app.run """
     
