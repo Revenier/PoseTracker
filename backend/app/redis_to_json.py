@@ -21,82 +21,45 @@ Cara dapetin keynya:
 
 """
 
-r = redis.Redis(host='localhost', port=6379, db=0)
+REDIS_HOST = "localhost"      # atau "redis" kalau di docker
+REDIS_PORT = 6379
+REDIS_DB   = 0
 
-key = "push_up:landmark:372c305671ad2b8cef0a8cce805d626db469211e2dc52e4822061ebacf160f57"
+# ganti key di sini
+key = "push_up:angle:260a28e7063e9659fc935cdc5a0c60834234211c0b87d0b770533a9709292885"
+
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=False)
 data = r.get(key)
 
-if data:
+if not data:
+    print(f"❌ Key '{key}' tidak ditemukan di Redis.")
+else:
     try:
         obj = pickle.loads(data)
-        print(f"\nType of object: {type(obj)}")
+        print(f"✅ Key ditemukan: {key}")
+        print(f"📦 Tipe objek: {type(obj)}")
 
-        # Convert numpy array ke list (kalau ada mediapipe)
-        if isinstance(obj, dict) and 'mediapipe' in obj:
-            try:
-                arr = obj['mediapipe'].tolist()
-                # Potong per 10 elemen, simpan horizontal
-                grouped = [arr[i:i+10] for i in range(0, len(arr), 10)]
-                obj['mediapipe'] = [" ".join(map(str, chunk)) for chunk in grouped]
-            except:
-                pass
+        # kalau numpy array, ubah ke list biar bisa dibaca
+        if hasattr(obj, "tolist"):
+            obj = obj.tolist()
 
-            print("JSON Representation:\n")
-            print(json.dumps(obj, indent=4))
+        # pastikan flat list
+        if isinstance(obj, list) and isinstance(obj[0], (int, float)):
+            flat = obj
+        elif isinstance(obj, list) and isinstance(obj[0], list):
+            # misal 2D array, flatten aja
+            flat = [x for row in obj for x in row]
+        else:
+            print("⚠️ Format data tidak terduga, menampilkan JSON mentah:")
+            print(json.dumps(obj, indent=2))
+            exit()
+
+        # tampilkan 10 angka per baris
+        print("\n📊 Data isi:")
+        for i in range(0, len(flat), 10):
+            chunk = flat[i:i+10]
+            print(" ".join(f"{v:.5f}" for v in chunk))
+
+        print(f"\n🔢 Total elemen: {len(flat)}")
     except Exception as e:
-        print("Gagal decode pickle:", e)
-else:
-    print("Key tidak ditemukan.")
-
-
-""" Versi Cloud """
-
-# Script ini digunakan untuk mengambil data mentah dari Redis Cloud
-
-"""
-Cara dapetin keynya:
-1. Buka RedisInsight
-2. Masuk ke database Fitpipe Cloud
-3. Klik salah satu key di database
-4. Copy judul landmark (yang sebelah string)(harus ada push_up:landmark:)
-"""
-
-load_dotenv(find_dotenv())
-
-# Redis Cloud untuk landmark
-# r = redis.Redis(
-#     host=os.getenv("REDIS_HOST_1"),
-#     port=int(os.getenv("REDIS_PORT_1")),
-#     username=os.getenv("REDIS_USER_1"),
-#     password=os.getenv("REDIS_PASS_1"),
-#     decode_responses=False  # penting untuk simpan/ambil data pickle
-# )
-
-# # Key yang mau dicek
-# key = "push_up:landmark:1ee5f3312ce6f281857cc35088371014b393a88ff64e900ac714075b7323aa8f"
-
-# data = r.get(key)
-
-# if data:
-#     try:
-#         obj = pickle.loads(data)
-#         print(f"\nType of object: {type(obj)}")
-
-#         if isinstance(obj, dict) and 'mediapipe' in obj:
-#             try:
-#                 arr = obj['mediapipe'].tolist()
-#                 # potong per 10 elemen
-#                 grouped = [arr[i:i+10] for i in range(0, len(arr), 10)]
-#                 # jadikan string horizontal
-#                 obj['mediapipe'] = [" ".join(map(str, chunk)) for chunk in grouped]
-#             except:
-#                 pass
-
-#             print("JSON Representation:\n")
-#             print(json.dumps(obj, indent=4))
-#     except Exception as e:
-#         print("Gagal decode pickle:", e)
-# else:
-#     print("Key tidak ditemukan.")
-
-
+        print("⚠️ Gagal decode pickle:", e)
