@@ -26,7 +26,7 @@ REDIS_PORT = 6379
 REDIS_DB   = 0
 
 # ganti key di sini
-key = "push_up:angle:260a28e7063e9659fc935cdc5a0c60834234211c0b87d0b770533a9709292885"
+key = "push_up:landmark:82dda076fd57478e313e69345fdcb412d3609acc81692a62aabf5c79f1a6b413"
 
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=False)
 data = r.get(key)

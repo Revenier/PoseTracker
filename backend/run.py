@@ -5,9 +5,10 @@ import numpy as np
 from app.logic import landmark_logic, angle_logic
 from app import data_loader as dl
 #from app.data_loader import posture_map
-from app.data_loader_csv import posture_map
+#from app.data_loader_csv import posture_map
 #from app.redis_client import get_or_cache_result
-from app.redis_client import get_or_cache_result_batch
+#from app.redis_client import get_or_cache_result_batch
+#from app.redis_client import count_keys
 
 app = Flask(__name__)
 CORS(app)
@@ -15,12 +16,102 @@ CORS(app)
 @app.route('/pose', methods=['POST'])
 def receive_pose():
     data = request.get_json()
-    #print(f"Received data: {data}")
     posture = data.get('posture')
     mediapipe = data.get('mediapipe', [])
 
-    if posture not in posture_map:
-        return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
+    if not posture or not isinstance(mediapipe, list) or len(mediapipe) == 0:
+        return ({
+            "status": "error",
+            "message": "Invalid input — need 'posture' and 'mediapipe' list."
+        }), 400
+    
+    # Buat hitung total key landmarks dan angles di Redis
+    # try:
+    #     lm_count = count_keys(posture, 'landmark')
+    #     ang_count = count_keys(posture, 'angle')
+    #     print(f"[Redis] Keys available: {lm_count} landmarks, {ang_count} angles", flush=True)
+    # except Exception as e:
+    #     print(f"[Redis] Count failed: {e}", flush=True)
+    
+    results = []
+    correct_count = 0
+
+    # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
+    for idx, arr in enumerate(mediapipe, start=1):
+        print(f"[Data {idx}] Processing posture={posture} | Input length={len(arr)}", flush=True)   
+        try:
+            angle_result = angle_logic(posture, arr)
+            landmark_result = landmark_logic(posture, arr)
+        except Exception as e:
+            results.append({
+                "index": idx,
+                "status": "error",
+                "message": str(e)
+            })
+            continue
+
+        # tentuin apakah array ini dianggap benar
+        feedback = ""
+        is_correct = False
+
+        if isinstance(landmark_result, dict):
+            feedback = landmark_result.get("feedback", "")
+            if "Correct" in feedback:
+                is_correct = True
+
+        elif isinstance(landmark_result, str):
+            feedback = landmark_result
+            if "Correct" in feedback:
+                is_correct = True
+
+        results.append({
+            "index": idx,
+            "angles": angle_result,
+            "landmarks": landmark_result,
+            "feedback": feedback,
+            "correct": is_correct
+        })
+
+        if is_correct:
+            correct_count += 1
+
+    total = len(results)
+    summary = {
+        "total_inputs": total,
+        "correct": correct_count,
+        "incorrect": total - correct_count,
+        "posture": posture,
+        "summary_result": (
+            "All Correct ✅" if correct_count == total else
+            ("Some Incorrect ❌" if correct_count > 0 else "All Failed ⚠️")
+        )
+    }
+
+    return ({
+        "status": "success",
+        "summary": summary,
+        "details": results
+    }), 200
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # if posture not in posture_map:
+    #     return jsonify({'status': 'error', 'message': 'Unknown posture'}), 400
 
 
     """ Versi batch dengan Redis docker lokal  """
@@ -42,29 +133,29 @@ def receive_pose():
 
 
     # Wajib list-of-arrays [99]
-    if not (isinstance(mediapipe, (list, tuple)) and mediapipe and isinstance(mediapipe[0], (list, tuple))):
-        return jsonify({'status': 'error', 'message': 'mediapipe must be a list of 99-length arrays'}), 400
+    # if not (isinstance(mediapipe, (list, tuple)) and mediapipe and isinstance(mediapipe[0], (list, tuple))):
+    #     return jsonify({'status': 'error', 'message': 'mediapipe must be a list of 99-length arrays'}), 400
 
-    #  Validasi input batch: wajib list-of-arrays, tiap array panjang 99
-    bad_idx = [i for i, s in enumerate(mediapipe) if not isinstance(s, (list, tuple)) or len(s) != 99]
-    if bad_idx:
-        return jsonify({'status': 'error', 'message': f'each sample must have 99 values; bad indices: {bad_idx}'}), 400
+    # #  Validasi input batch: wajib list-of-arrays, tiap array panjang 99
+    # bad_idx = [i for i, s in enumerate(mediapipe) if not isinstance(s, (list, tuple)) or len(s) != 99]
+    # if bad_idx:
+    #     return jsonify({'status': 'error', 'message': f'each sample must have 99 values; bad indices: {bad_idx}'}), 400
 
-    # 3) Proses batch via Redis lokal (flow key & log masih “landmark/angle”)
-    angle_outs    = get_or_cache_result_batch(posture, mediapipe, angle_logic)
-    landmark_outs = get_or_cache_result_batch(posture, mediapipe, landmark_logic)
+    # # 3) Proses batch via Redis lokal (flow key & log masih “landmark/angle”)
+    # angle_outs    = get_or_cache_result_batch(posture, mediapipe, angle_logic)
+    # landmark_outs = get_or_cache_result_batch(posture, mediapipe, landmark_logic)
 
-    # 4) Satukan hasil per-sample
-    details = [
-        {'index': i, 'angles': a, 'landmarks': l}
-        for i, (a, l) in enumerate(zip(angle_outs, landmark_outs))
-    ]
+    # # 4) Satukan hasil per-sample
+    # details = [
+    #     {'index': i, 'angles': a, 'landmarks': l}
+    #     for i, (a, l) in enumerate(zip(angle_outs, landmark_outs))
+    # ]
 
-    return jsonify({
-        'status': 'success',
-        'batch': True,
-        'details': details
-    }), 200
+    # return jsonify({
+    #     'status': 'success',
+    #     'batch': True,
+    #     'details': details
+    # }), 200
 
 
 
