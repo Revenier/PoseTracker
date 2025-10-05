@@ -59,15 +59,12 @@ def main():
         default=str(Path(__file__).parent / "app" / "data_per_pose"),
         help="Folder data_per_pose (default: <script_dir>/app/data_per_pose)",
     )
-    ap.add_argument("--posture", default="push_up")
     args = ap.parse_args()
  
     data_dir = Path(args.dir)
-    posture = args.posture
 
-    # --- resolver fleksibel ---
     candidates = [
-        data_dir,  # yang dikasih user / default
+        data_dir,
         Path(__file__).parent / "app" / "data_per_pose",
         Path(__file__).parent / "data_per_pose",
         Path("/app/data_per_pose"),
@@ -82,30 +79,44 @@ def main():
     else:
         print(f"📁 data_per_pose digunakan: {data_dir}")
 
-    # ✅ Landmarks (WAJIB ADA)
-    lm_path = data_dir / f"{posture}_landmarks_raw.csv"
-    if not lm_path.is_file():
-        print(f"❌ File tidak ditemukan: {lm_path}")
-        sys.exit(1)
-    landmarks = read_numeric_csv(lm_path)
-
-    # Angles (opsional)
-    an_path = data_dir / f"{posture}_angles_raw.csv"
-    angles = read_numeric_csv(an_path) if an_path.is_file() else None
-
     r = get_redis()
     print(f"✅ Connected to Redis ({REDIS_HOST}:{REDIS_PORT}, db={REDIS_DB})")
 
-    lm_new, lm_found, lm_total = save_rows(r, posture, "landmark", "landmark_logic", landmarks)
-    print(f"🔎 Summary landmarks: total_rows={lm_total}, new={lm_new}, found={lm_found}")
+    poses = ["jumping_jack", "push_up", "situp", "squat"]
 
-    if angles is not None:
-        an_new, an_found, an_total = save_rows(r, posture, "angle", "angle_logic", angles)
-        print(f"🔎 Summary angles   : total_rows={an_total}, new={an_new}, found={an_found}")
-    else:
-        print("ℹ️  angles: file tidak ditemukan — dilewati.")
+    total_new = 0
+    total_found = 0
+    total_rows = 0
 
-    print("Selesai.")
+    for posture in poses:
+        print(f"\n=== 🏋️ Dumping posture: {posture} ===")
+
+        lm_path = data_dir / f"{posture}_landmarks_raw.csv"
+        if not lm_path.is_file():
+            print(f"❌ File tidak ditemukan: {lm_path}")
+            continue
+        landmarks = read_numeric_csv(lm_path)
+        lm_new, lm_found, lm_total = save_rows(r, posture, "landmark", "landmark_logic", landmarks)
+        print(f"🔎 Landmarks: total_rows={lm_total}, new={lm_new}, found={lm_found}")
+
+        total_new += lm_new
+        total_found += lm_found
+        total_rows += lm_total
+
+        an_path = data_dir / f"{posture}_angles_raw.csv"
+        if an_path.is_file():
+            angles = read_numeric_csv(an_path)
+            an_new, an_found, an_total = save_rows(r, posture, "angle", "angle_logic", angles)
+            print(f"🔎 Angles   : total_rows={an_total}, new={an_new}, found={an_found}")
+
+            total_new += an_new
+            total_found += an_found
+            total_rows += an_total
+        else:
+            print("ℹ️  Angles file tidak ditemukan — dilewati.")
+
+    print("\n✅ Selesai preload semua pose.")
+    print(f"📊 TOTAL KESELURUHAN → total_rows={total_rows}, new={total_new}, found_duplicate={total_found}")
 
 
 
