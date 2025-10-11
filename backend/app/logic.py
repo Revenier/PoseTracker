@@ -1,25 +1,43 @@
 #from app import data_loader as dl
-from app import data_loader_csv as dl
+#from app import data_loader_csv as dl
 import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
-
-r = redis.Redis(host='localhost', port=6379, db=0)
+from app.redis_client import load_feature_matrix
 
 # TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
-    key = f"{posture}:{data_type}:ref"
-    data = r.get(key)
-    if data is None:
+    alias = {"landmarks": "landmark", "angles": "angle"}
+    dt = alias.get(str(data_type).lower(), str(data_type).lower())
+
+    # 🔍 Ambil semua fitur (array landmark/angle) dari Redis
+    feats = load_feature_matrix(posture, dt)
+
+    # Kalau Redis gak punya data posture + data_type ini
+    if feats.size == 0:
+        print("Data Miss ❌ (not found in Redis)")
         raise Exception("Reference data not found in Redis")
-    arr = np.array(json.loads(data))
-    return arr  # shape (N, 99)
+
+    print(f"Data Hit ✅ [{dt}] ({feats.shape[0]} rows, {feats.shape[1]} cols)", flush=True)
+
+    if feats.ndim != 2:
+        feats = np.asarray(feats, dtype=float)
+    return feats
+
+# def get_ref_from_redis(posture, data_type):
+#     key = f"{posture}:{data_type}:ref"
+#     data = r.get(key)
+#     if data is None:
+#         raise Exception("Reference data not found in Redis")
+#     arr = np.array(json.loads(data))
+#     return arr  # shape (N, 99)
+
 
 def landmark_logic(posture, input_landmarks):
     # 1. Check if the posture is valid
-    if posture not in dl.posture_map:
-        return {'status': 'error', 'message': 'Unknown posture'}
+    # if posture not in dl.posture_map:
+    #     return {'status': 'error', 'message': 'Unknown posture'}
 
     # 2. Check if input_data has 99 values (33 points * 3 coords)
     if len(input_landmarks) != 99:
@@ -28,9 +46,13 @@ def landmark_logic(posture, input_landmarks):
     input_norm = normalize([input_landmarks], axis=1)
     # TODO: (DONE) (NEED CHECK) ref_landmarks_func should be load from redis cache
     # ref_landmarks_func = dl.posture_map[posture]['landmarks']
-    ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
+    #ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
     # 3. Get reference landmarks and normalize them
-    ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
+    #ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
+
+    ref_landmarks = get_ref_from_redis(posture, 'landmarks')
+
+
     ref_norm = normalize(ref_landmarks, axis=1)
     if input_norm.shape[1] != ref_norm.shape[1]:
         return f"Input and reference dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}"
@@ -75,8 +97,8 @@ def align_landmarks(landmarks):
 
 def angle_logic(posture, input_data):
     # 1. Check if the posture is valid
-    if posture not in dl.posture_map:
-        return {'status': 'error', 'message': 'Unknown posture'}
+    # if posture not in dl.posture_map:
+    #     return {'status': 'error', 'message': 'Unknown posture'}
 
     # 2. Check if input_data has 99 values (33 points * 3 coords)
     if len(input_data) != 99:
@@ -108,8 +130,10 @@ def angle_logic(posture, input_data):
 
     # TODO: (DONE) (NEED CHECK)  ref_angles_func should be load from redis cache
     # ref_angles_func = dl.posture_map[posture]['angles']
-    ref_angles_func = get_ref_from_redis(posture, 'angles')
-    ref_angles = ref_angles_func()  # shape: (N, num_angles)
+    # ref_angles_func = get_ref_from_redis(posture, 'angles')
+    # ref_angles = ref_angles_func()  # shape: (N, num_angles)
+
+    ref_angles = get_ref_from_redis(posture, 'angles')
 
     # Find the closest reference frame (smallest total angle difference)
     diffs_all = np.abs(ref_angles - input_angles)
