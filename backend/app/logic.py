@@ -4,35 +4,57 @@ import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
-from app.redis_client import load_feature_matrix
+from app.redis_client import load_feature_matrix, r
 
+_REF_CACHE = {}
 # TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
     alias = {"landmarks": "landmark", "angles": "angle"}
     dt = alias.get(str(data_type).lower(), str(data_type).lower())
 
-    # 🔍 Ambil semua fitur (array landmark/angle) dari Redis
-    feats = load_feature_matrix(posture, dt)
+    key = (posture, dt)
+
+    # Cek apakah posture+datatype ini udah pernah di-load sebelumnya
+    if key in _REF_CACHE:
+        feats = _REF_CACHE[key]
+        print(f"♻️ Using cached reference for {posture}:{dt}")
+    else:
+        pattern = f"{posture}:{dt}:*"
+        cursor = 0
+        all_keys = []
+        while True:
+            cursor, keys = r.scan(cursor=cursor, match=pattern, count=1000)
+            for k in keys:
+                if isinstance(k, bytes):
+                    k = k.decode()
+                if k.startswith(f"{posture}:{dt}:"):
+                    all_keys.append(k)
+            if cursor == 0:
+                break
+
+        # Tampilkan berapa banyak key ditemukan
+        print(f"📦 Found {len(all_keys)} keys for {posture}:{dt}")
+        for k in all_keys[:10]:
+            print(f"   • {k}")
+        if len(all_keys) > 10:
+            print(f"   ... and {len(all_keys) - 10} more ...")
+
+        # Ambil isinya dari Redis
+        feats = load_feature_matrix(posture, dt)
+        _REF_CACHE[key] = feats
 
     # Kalau Redis gak punya data posture + data_type ini
     if feats.size == 0:
-        print("Data Miss ❌ (not found in Redis)")
-        raise Exception("Reference data not found in Redis")
-
-    print(f"Data Hit ✅ [{dt}] ({feats.shape[0]} rows, {feats.shape[1]} cols)", flush=True)
+        msg = f"No reference data in Redis for posture='{posture}' type='{dt}'"
+        print(f"❌ {msg}")
+        raise ValueError(msg)
 
     if feats.ndim != 2:
         feats = np.asarray(feats, dtype=float)
+        _REF_CACHE[key] = feats
+
+    print(f"✅ Got {len(feats)} samples for posture='{posture}' type='{dt}' | shape={feats.shape}")
     return feats
-
-# def get_ref_from_redis(posture, data_type):
-#     key = f"{posture}:{data_type}:ref"
-#     data = r.get(key)
-#     if data is None:
-#         raise Exception("Reference data not found in Redis")
-#     arr = np.array(json.loads(data))
-#     return arr  # shape (N, 99)
-
 
 def landmark_logic(posture, input_landmarks):
     # 1. Check if the posture is valid
@@ -46,7 +68,7 @@ def landmark_logic(posture, input_landmarks):
     input_norm = normalize([input_landmarks], axis=1)
     # TODO: (DONE) (NEED CHECK) ref_landmarks_func should be load from redis cache
     # ref_landmarks_func = dl.posture_map[posture]['landmarks']
-    #ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
+    # ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
     # 3. Get reference landmarks and normalize them
     #ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
 

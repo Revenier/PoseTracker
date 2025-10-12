@@ -6,8 +6,6 @@ from app.logic import landmark_logic, angle_logic
 from app import data_loader as dl
 #from app.data_loader import posture_map
 #from app.data_loader_csv import posture_map
-#from app.redis_client import get_or_cache_result
-#from app.redis_client import get_or_cache_result_batch
 #from app.redis_client import count_keys
 
 app = Flask(__name__)
