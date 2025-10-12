@@ -43,7 +43,7 @@ def load_feature_matrix(posture: str, data_type: Literal["landmark", "angle"], *
             if k.startswith(f"{posture}:{data_type}:"):
                 clean_keys.append(k)
 
-        # Kalau ada key yang valid, ambil semua valuenya sekaligus (MGET)
+        # Kalau ada key yang valid, ambil semua valuenya sekaligus
         if clean_keys:
             vals = r.mget(clean_keys)
             for raw in vals:
