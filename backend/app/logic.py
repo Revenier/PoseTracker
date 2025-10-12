@@ -6,7 +6,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
 from app.redis_client import load_feature_matrix, r
 
+# variable untuk menyimpan data yang sudah di-load dari Redis
 _REF_CACHE = {}
+
 # TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
     alias = {"landmarks": "landmark", "angles": "angle"}
@@ -14,21 +16,25 @@ def get_ref_from_redis(posture, data_type):
 
     key = (posture, dt)
 
-    # Cek apakah posture+datatype ini udah pernah di-load sebelumnya
+    # Cek apakah posture + datatype ini udah pernah di-load sebelumnya
     if key in _REF_CACHE:
         feats = _REF_CACHE[key]
         print(f"♻️ Using cached reference for {posture}:{dt}")
     else:
+        # Kalau belum ada, mulai ambil dari Redis
         pattern = f"{posture}:{dt}:*"
         cursor = 0
         all_keys = []
         while True:
             cursor, keys = r.scan(cursor=cursor, match=pattern, count=1000)
             for k in keys:
+                # Pastikan hasil key berupa string (kadang bytes)
                 if isinstance(k, bytes):
                     k = k.decode()
+                # Tambahkan hanya key yang benar-benar cocok dengan prefix posture:type
                 if k.startswith(f"{posture}:{dt}:"):
                     all_keys.append(k)
+            # Kalau cursor == 0 berarti sudah selesai scan semua key
             if cursor == 0:
                 break
 
