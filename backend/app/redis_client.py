@@ -71,7 +71,13 @@ def load_feature_matrix(posture: str, data_type: Literal["landmark", "angle"], *
         print(f"[Redis] ❌ No rows found for {posture}:{data_type}", flush=True)
         return np.empty((0, 0), dtype=dtype)
 
-    print(f"[Redis] ✅ Loaded {len(rows)} rows for {posture}:{data_type}", flush=True)
+    # Dimensi & sample info
+    sample_len = len(rows[0]) if rows and isinstance(rows[0], (list, tuple)) else -1
+    print(
+        f"[Redis] ✅ Loaded rows={len(rows)} | titik={sample_len} "
+        f"| for {posture}:{data_type}",
+        flush=True
+    )
     return np.asarray(rows, dtype=dtype)
 
 

@@ -14,52 +14,17 @@ def get_ref_from_redis(posture, data_type):
     alias = {"landmarks": "landmark", "angles": "angle"}
     dt = alias.get(str(data_type).lower(), str(data_type).lower())
 
-    key = (posture, dt)
+    # langsung ambil dari Redis
+    feats = load_feature_matrix(posture, dt)
 
-    # Cek apakah posture + datatype ini udah pernah di-load sebelumnya
-    if key in _REF_CACHE:
-        feats = _REF_CACHE[key]
-        print(f"♻️ Using cached reference for {posture}:{dt}")
-    else:
-        # Kalau belum ada, mulai ambil dari Redis
-        pattern = f"{posture}:{dt}:*"
-        cursor = 0
-        all_keys = []
-        while True:
-            cursor, keys = r.scan(cursor=cursor, match=pattern, count=1000)
-            for k in keys:
-                # Pastikan hasil key berupa string (kadang bytes)
-                if isinstance(k, bytes):
-                    k = k.decode()
-                # Tambahkan hanya key yang benar-benar cocok dengan prefix posture:type
-                if k.startswith(f"{posture}:{dt}:"):
-                    all_keys.append(k)
-            # Kalau cursor == 0 berarti sudah selesai scan semua key
-            if cursor == 0:
-                break
-
-        # Tampilkan berapa banyak key ditemukan
-        print(f"📦 Found {len(all_keys)} keys for {posture}:{dt}")
-        for k in all_keys[:10]:
-            print(f"   • {k}")
-        if len(all_keys) > 10:
-            print(f"   ... and {len(all_keys) - 10} more ...")
-
-        # Ambil isinya dari Redis
-        feats = load_feature_matrix(posture, dt)
-        _REF_CACHE[key] = feats
-
-    # Kalau Redis gak punya data posture + data_type ini
+    # validasi hasil
     if feats.size == 0:
-        msg = f"No reference data in Redis for posture='{posture}' type='{dt}'"
-        print(f"❌ {msg}")
-        raise ValueError(msg)
+        raise ValueError(f"No reference data in Redis for {posture}:{dt}")
 
     if feats.ndim != 2:
         feats = np.asarray(feats, dtype=float)
-        _REF_CACHE[key] = feats
 
-    print(f"✅ Got {len(feats)} samples for posture='{posture}' type='{dt}' | shape={feats.shape}")
+    print(f"✅ Loaded {feats.shape[0]} samples for {posture}:{dt}")
     return feats
 
 def landmark_logic(posture, input_landmarks):
