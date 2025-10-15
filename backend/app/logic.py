@@ -4,35 +4,28 @@ import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
-from app.redis_client import load_feature_matrix
+from app.redis_client import load_feature_matrix, r
+
+# variable untuk menyimpan data yang sudah di-load dari Redis
+_REF_CACHE = {}
 
 # TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
     alias = {"landmarks": "landmark", "angles": "angle"}
     dt = alias.get(str(data_type).lower(), str(data_type).lower())
 
-    # 🔍 Ambil semua fitur (array landmark/angle) dari Redis
+    # langsung ambil dari Redis
     feats = load_feature_matrix(posture, dt)
 
-    # Kalau Redis gak punya data posture + data_type ini
+    # validasi hasil
     if feats.size == 0:
-        print("Data Miss ❌ (not found in Redis)")
-        raise Exception("Reference data not found in Redis")
-
-    print(f"Data Hit ✅ [{dt}] ({feats.shape[0]} rows, {feats.shape[1]} cols)", flush=True)
+        raise ValueError(f"No reference data in Redis for {posture}:{dt}")
 
     if feats.ndim != 2:
         feats = np.asarray(feats, dtype=float)
+
+    print(f"✅ Loaded {feats.shape[0]} samples for {posture}:{dt}")
     return feats
-
-# def get_ref_from_redis(posture, data_type):
-#     key = f"{posture}:{data_type}:ref"
-#     data = r.get(key)
-#     if data is None:
-#         raise Exception("Reference data not found in Redis")
-#     arr = np.array(json.loads(data))
-#     return arr  # shape (N, 99)
-
 
 def landmark_logic(posture, input_landmarks):
     # 1. Check if the posture is valid
@@ -46,7 +39,7 @@ def landmark_logic(posture, input_landmarks):
     input_norm = normalize([input_landmarks], axis=1)
     # TODO: (DONE) (NEED CHECK) ref_landmarks_func should be load from redis cache
     # ref_landmarks_func = dl.posture_map[posture]['landmarks']
-    #ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
+    # ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
     # 3. Get reference landmarks and normalize them
     #ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
 
