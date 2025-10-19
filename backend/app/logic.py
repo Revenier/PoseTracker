@@ -1,21 +1,54 @@
 #from app import data_loader as dl
-#from app import data_loader_csv as dl
+from app import data_loader_csv as dl
 import numpy as np
 from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
 from app.redis_client import load_feature_matrix, r
+import time
 
-# variable untuk menyimpan data yang sudah di-load dari Redis
-_REF_CACHE = {}
+BACKEND = "csv"  # "csv" or "redis"
+TOTAL_LOAD_TIME = 0.0   
+
+def get_ref_landmarks(posture):
+    if BACKEND == "redis":
+        return get_ref_from_redis(posture, "landmarks")
+    else:
+        global TOTAL_LOAD_TIME
+        t0 = time.time()
+        ref = dl.posture_map[posture]["landmarks"]()
+        load_time = time.time() - t0
+        TOTAL_LOAD_TIME += load_time
+        print(f"[landmark_logic][{BACKEND.upper()}] Loaded {posture}:landmark in {load_time:.4f}s")
+        return np.asarray(ref, dtype=float)
+
+
+def get_ref_angles(posture):
+    if BACKEND == "redis":
+        return get_ref_from_redis(posture, "angles")
+    else:
+        global TOTAL_LOAD_TIME
+        t0 = time.time()
+        ref = dl.posture_map[posture]["angles"]()
+        load_time = time.time() - t0
+        TOTAL_LOAD_TIME += load_time
+        print(f"[angle_logic][{BACKEND.upper()}] Loaded {posture}:angle in {load_time:.4f}s")
+        arr = np.asarray(ref, dtype=float)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        return arr
 
 # TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
+    global TOTAL_LOAD_TIME
     alias = {"landmarks": "landmark", "angles": "angle"}
     dt = alias.get(str(data_type).lower(), str(data_type).lower())
 
     # langsung ambil dari Redis
+    t0 = time.time()
     feats = load_feature_matrix(posture, dt)
+    load_time = time.time() - t0
+    TOTAL_LOAD_TIME += load_time
 
     # validasi hasil
     if feats.size == 0:
@@ -24,10 +57,12 @@ def get_ref_from_redis(posture, data_type):
     if feats.ndim != 2:
         feats = np.asarray(feats, dtype=float)
 
-    print(f"✅ Loaded {feats.shape[0]} samples for {posture}:{dt}")
+    print(f"[{dt}_logic][{BACKEND.upper()}] ✅ Loaded {feats.shape[0]} samples for {posture}:{dt} in {load_time:.4f}s")
     return feats
 
 def landmark_logic(posture, input_landmarks):
+    total_start = time.time()
+
     # 1. Check if the posture is valid
     # if posture not in dl.posture_map:
     #     return {'status': 'error', 'message': 'Unknown posture'}
@@ -37,13 +72,9 @@ def landmark_logic(posture, input_landmarks):
         return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
 
     input_norm = normalize([input_landmarks], axis=1)
-    # TODO: (DONE) (NEED CHECK) ref_landmarks_func should be load from redis cache
-    # ref_landmarks_func = dl.posture_map[posture]['landmarks']
-    # ref_landmarks_func = get_ref_from_redis(posture, 'landmarks')
-    # 3. Get reference landmarks and normalize them
-    #ref_landmarks = ref_landmarks_func()  # shape: (N, 99)
-
-    ref_landmarks = get_ref_from_redis(posture, 'landmarks')
+    # TODO: (DONE) (NEED CHECK) ref_landmarks should be load from redis cache
+    
+    ref_landmarks = get_ref_landmarks(posture)
 
 
     ref_norm = normalize(ref_landmarks, axis=1)
@@ -52,9 +83,15 @@ def landmark_logic(posture, input_landmarks):
     sims = cosine_similarity(input_norm, ref_norm)[0]
     best_score = np.max(sims)
     if best_score > 0.95:
-        return "Correct form!"
+        result = "Correct form!"
     else:
-        return "Wrong form, try again!"
+        result = "Wrong form, try again!"
+    
+    total_time = time.time() - total_start
+    print(f"[landmark_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
+    print(f"[GLOBAL][{BACKEND.upper()}] ⏱ CUMULATIVE LOAD TIME: {TOTAL_LOAD_TIME:.4f}s")
+
+    return result
 
 def calculate_angle(a, b, c):
     ba = a - b
@@ -89,6 +126,8 @@ def align_landmarks(landmarks):
     return aligned
 
 def angle_logic(posture, input_data):
+    total_start = time.time()
+
     # 1. Check if the posture is valid
     # if posture not in dl.posture_map:
     #     return {'status': 'error', 'message': 'Unknown posture'}
@@ -121,12 +160,9 @@ def angle_logic(posture, input_data):
         input_angles.append(calculate_angle(landmarks[a], landmarks[b], landmarks[c]))
     input_angles = np.array(input_angles)
 
-    # TODO: (DONE) (NEED CHECK)  ref_angles_func should be load from redis cache
-    # ref_angles_func = dl.posture_map[posture]['angles']
-    # ref_angles_func = get_ref_from_redis(posture, 'angles')
-    # ref_angles = ref_angles_func()  # shape: (N, num_angles)
+    # TODO: (DONE) (NEED CHECK)  ref_angles should be load from redis cache
 
-    ref_angles = get_ref_from_redis(posture, 'angles')
+    ref_angles = get_ref_angles(posture)
 
     # Find the closest reference frame (smallest total angle difference)
     diffs_all = np.abs(ref_angles - input_angles)
@@ -137,10 +173,16 @@ def angle_logic(posture, input_data):
     wrong_indices = np.where(diffs > 15)[0]  # threshold for "wrong"
 
     if len(wrong_indices) >= 3:
-        return f"You're not doing a {posture.replace('_', ' ')}. Please check your form."
+        result = f"You're not doing a {posture.replace('_', ' ')}. Please check your form."
     elif len(wrong_indices) > 0:
         max_idx = wrong_indices[np.argmax(diffs[wrong_indices])]
         suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {best_ref[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
-        return f"Incorrect posture, try again! {suggestion}"
+        result = f"Incorrect posture, try again! {suggestion}"
     else:
-        return "Correct posture!"
+        result = "Correct posture!"
+    
+    total_time = time.time() - total_start
+    print(f"[angle_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
+    print(f"[GLOBAL][{BACKEND.upper()}] ⏱ CUMULATIVE LOAD TIME: {TOTAL_LOAD_TIME:.4f}s")
+
+    return result
