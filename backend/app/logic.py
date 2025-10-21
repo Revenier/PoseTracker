@@ -7,7 +7,7 @@ import redis, json, numpy as np
 from app.redis_client import load_feature_matrix, r
 import time
 
-BACKEND = "csv"  # "csv" or "redis"
+BACKEND = "redis"  # "csv" or "redis"
 TOTAL_LOAD_TIME = 0.0   
 
 def get_ref_landmarks(posture):

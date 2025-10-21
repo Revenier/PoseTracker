@@ -6,7 +6,6 @@ from app.logic import landmark_logic, angle_logic
 from app import data_loader as dl
 #from app.data_loader import posture_map
 #from app.data_loader_csv import posture_map
-#from app.redis_client import count_keys
 
 app = Flask(__name__)
 CORS(app)
@@ -22,14 +21,6 @@ def receive_pose():
             "status": "error",
             "message": "Invalid input — need 'posture' and 'mediapipe' list."
         }), 400
-    
-    # Buat hitung total key landmarks dan angles di Redis
-    # try:
-    #     lm_count = count_keys(posture, 'landmark')
-    #     ang_count = count_keys(posture, 'angle')
-    #     print(f"[Redis] Keys available: {lm_count} landmarks, {ang_count} angles", flush=True)
-    # except Exception as e:
-    #     print(f"[Redis] Count failed: {e}", flush=True)
     
     results = []
     correct_count = 0
