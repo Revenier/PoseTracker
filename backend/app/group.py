@@ -13,7 +13,17 @@ bodyPartMap = {
     24: "right leg", 26: "right leg", 28: "right leg", 30: "right leg", 32: "right leg"
 }
 
-def group_feedback(feedback_list):
+ANGLE_NAME_MAP = {
+    (14, 12, 24): "right_shoulder_angle",
+    (13, 11, 23): "left_shoulder_angle",
+    (26, 24, 25): "right_knee_angle",
+    (24, 26, 28): "right_hip_angle",
+    (23, 25, 27): "left_hip_angle",
+    (16, 14, 12): "right_wrist_angle",
+    (15, 13, 11): "left_wrist_angle",
+}
+
+def group_landmark_feedback(feedback_list):
     # Collect all wrong indices from the batch
     all_wrong_indices = []
     for fb in feedback_list:
@@ -33,10 +43,25 @@ def group_feedback(feedback_list):
     feedback_msgs = [f"Check your {part} (mistakes: {count})" for part, count in most_common]
     return " | ".join(feedback_msgs)
 
-# Example usage:
-# feedback_list = [
-#     {"wrong_indices": [13, 25]},  # left arm, left leg
-#     {"wrong_indices": [25]},      # left leg
-#     {"wrong_indices": []},        # correct
-# ]
-# print(group_feedback(feedback_list))
+def group_angle_feedback(feedback_list):
+    # Collect all wrong angle indices from the batch
+    all_wrong_indices = []
+    for fb in feedback_list:
+        if isinstance(fb, dict) and 'wrong_indices' in fb:
+            all_wrong_indices.extend(fb['wrong_indices'])
+    if not all_wrong_indices:
+        return "All angles correct!"
+
+    angle_names = [ANGLE_NAME_MAP.get(tuple(idx), "unknown_angle") 
+                  for idx in all_wrong_indices]
+    
+    angle_counts = Counter(angle_names)
+    
+    most_common = angle_counts.most_common(2)
+
+    feedback_msgs = []
+    for angle_name, count in most_common:
+        readable_name = angle_name.replace('_', ' ').title()
+        feedback_msgs.append(f"Adjust your {readable_name} (wrong: {count}x)")
+    
+    return " | ".join(feedback_msgs)

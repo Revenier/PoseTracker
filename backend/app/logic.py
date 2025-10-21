@@ -63,30 +63,56 @@ def get_ref_from_redis(posture, data_type):
 def landmark_logic(posture, input_landmarks):
     total_start = time.time()
 
-    # 1. Check if the posture is valid
-    # if posture not in dl.posture_map:
-    #     return {'status': 'error', 'message': 'Unknown posture'}
-
-    # 2. Check if input_data has 99 values (33 points * 3 coords)
     if len(input_landmarks) != 99:
         return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
 
     input_norm = normalize([input_landmarks], axis=1)
-    # TODO: (DONE) (NEED CHECK) ref_landmarks should be load from redis cache
     
     ref_landmarks = get_ref_landmarks(posture)
-
 
     ref_norm = normalize(ref_landmarks, axis=1)
     if input_norm.shape[1] != ref_norm.shape[1]:
         return f"Input and reference dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}"
     sims = cosine_similarity(input_norm, ref_norm)[0]
     best_score = np.max(sims)
-    if best_score > 0.95:
+    best_idx = np.argmax(sims)
+    
+    VERY_GOOD = 0.9
+    GOOD = 0.8
+    POOR = 0.7
+
+    if best_score > VERY_GOOD:
         result = "Correct form!"
     else:
-        result = "Wrong form, try again!"
-    
+        input_pose = input_norm[0].reshape(33, 3)
+        ref_pose = ref_norm[best_idx].reshape(33, 3)
+
+        body_parts = {
+            'arms': ([11,13,15,12,14,16], "arm position"),
+            'legs': ([23,25,27,24,26,28], "leg position"),
+            'torso': ([11,12,23,24], "body alignment"),
+            'shoulders': ([11,12], "shoulder level"),
+            'hips': ([23,24], "hip position")
+        }
+        
+        issues = []
+        for indices, name in body_parts.values():
+            part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
+            if part_diff > 0.2: 
+                issues.append(name)
+        
+        if issues:
+            if best_score > GOOD:
+                feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
+            elif best_score > POOR:
+                feedback = f"Form needs work. Focus on {' and '.join(issues[:2])}"
+            else:
+                feedback = f"Incorrect form. Major issues with {' and '.join(issues[:2])}"
+        else:
+            feedback = ""
+            
+        result = f"Wrong form, try again! {feedback}"
+
     total_time = time.time() - total_start
     print(f"[landmark_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
     print(f"[GLOBAL][{BACKEND.upper()}] ⏱ CUMULATIVE LOAD TIME: {TOTAL_LOAD_TIME:.4f}s")
