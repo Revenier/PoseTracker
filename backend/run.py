@@ -36,7 +36,7 @@ def receive_pose():
 
     # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
     for idx, arr in enumerate(mediapipe, start=1):
-        print(f"[Data {idx}] Processing posture={posture} | Input length={len(arr)}", flush=True)   
+        print(f"\n[Data {idx}] Processing posture={posture} | Input length={len(arr)}\n", flush=True)   
         try:
             angle_result = angle_logic(posture, arr)
             landmark_result = landmark_logic(posture, arr)
