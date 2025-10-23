@@ -76,6 +76,9 @@ def landmark_logic(posture, input_landmarks):
     sims = cosine_similarity(input_norm, ref_norm)[0]
     best_score = np.max(sims)
     best_idx = np.argmax(sims)
+
+    print("\nDEBUG POSE:")
+    print(f"Best similarity score: {best_score:.4f} at index {best_idx}")
     
     VERY_GOOD = 0.9
     GOOD = 0.8
@@ -96,9 +99,9 @@ def landmark_logic(posture, input_landmarks):
         }
         
         issues = []
-        for indices, name in body_parts.values():
+        for body_part, (indices, name) in body_parts.items():
             part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-            if part_diff > 0.2: 
+            if part_diff > 0.1: 
                 issues.append(name)
         
         if issues:
@@ -109,9 +112,9 @@ def landmark_logic(posture, input_landmarks):
             else:
                 feedback = f"Incorrect form. Major issues with {' and '.join(issues[:2])}"
         else:
-            feedback = ""
+            feedback = "Wrong form, try again!"
             
-        result = f"Wrong form, try again! {feedback}"
+        result = f"{feedback}"
 
     total_time = time.time() - total_start
     print(f"[landmark_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
