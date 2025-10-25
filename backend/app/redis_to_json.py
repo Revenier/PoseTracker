@@ -21,7 +21,7 @@ Cara dapetin keynya:
 
 """
 
-REDIS_HOST = "localhost"      # atau "redis" kalau di docker
+REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 REDIS_DB   = 0
 
