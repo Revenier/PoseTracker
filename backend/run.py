@@ -2,10 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from app.group import group_landmark_feedback, group_angle_feedback
-from app.logic import landmark_logic, angle_logic
+from app.logic import landmark_logic, angle_logic, get_ref_landmarks, get_ref_angles
 from app import data_loader as dl
-
-#test
 
 app = Flask(__name__)
 CORS(app)
@@ -22,6 +20,19 @@ def receive_pose():
             "message": "Invalid input — need 'posture' and 'mediapipe' list."
         }), 400
     
+    try:
+        ref_landmarks_all = get_ref_landmarks(posture)  # np.array (N,99)
+    except Exception as e:
+        ref_landmarks_all = None
+        print(f"[WARN] gagal load landmark ref: {e}")
+
+    try:
+        ref_angles_all = get_ref_angles(posture)  # np.array (N,7)
+    except Exception as e:
+        ref_angles_all = None
+        print(f"[WARN] gagal load angle ref: {e}")
+
+    
     results = []
     correct_count = 0
 
@@ -29,8 +40,8 @@ def receive_pose():
     for idx, arr in enumerate(mediapipe, start=1):
         print(f"\n[Data {idx}] Processing posture={posture} | Input length={len(arr)}\n", flush=True)   
         try:
-            angle_result = angle_logic(posture, arr)
-            landmark_result = landmark_logic(posture, arr)
+            angle_result = angle_logic(posture, arr, ref_angles=ref_angles_all)
+            landmark_result = landmark_logic(posture, arr, ref_landmarks=ref_landmarks_all)
         except Exception as e:
             results.append({
                 "index": idx,

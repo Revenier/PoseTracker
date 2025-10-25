@@ -60,16 +60,17 @@ def get_ref_from_redis(posture, data_type):
     print(f"[{dt}_logic][{BACKEND.upper()}] ✅ Loaded {feats.shape[0]} samples for {posture}:{dt} in {load_time:.4f}s")
     return feats
 
-def landmark_logic(posture, input_landmarks):
+def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     total_start = time.time()
 
     if len(input_landmarks) != 99:
         return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
 
     input_norm = normalize([input_landmarks], axis=1)
-    
-    ref_landmarks = get_ref_landmarks(posture)
 
+    if ref_landmarks is None:
+        ref_landmarks = get_ref_landmarks(posture)
+    
     ref_norm = normalize(ref_landmarks, axis=1)
     if input_norm.shape[1] != ref_norm.shape[1]:
         return f"Input and reference dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}"
@@ -154,7 +155,7 @@ def align_landmarks(landmarks):
     aligned = np.hstack([xy_rot, landmarks[:, 2:3]])
     return aligned
 
-def angle_logic(posture, input_data):
+def angle_logic(posture, input_data, ref_angles=None):
     total_start = time.time()
 
     # 1. Check if the posture is valid
@@ -191,7 +192,8 @@ def angle_logic(posture, input_data):
 
     # TODO: (DONE) (NEED CHECK)  ref_angles should be load from redis cache
 
-    ref_angles = get_ref_angles(posture)
+    if ref_angles is None:
+        ref_angles = get_ref_angles(posture)
 
     # Find the closest reference frame (smallest total angle difference)
     diffs_all = np.abs(ref_angles - input_angles)

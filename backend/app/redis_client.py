@@ -33,7 +33,7 @@ def load_feature_matrix(posture: str, data_type: Literal["landmark", "angle"], *
 
     while True:
         # Ambil batch key dari Redis sesuai pola
-        cursor, keys = r.scan(cursor=cursor, match=pattern, count=1000)
+        cursor, keys = r.scan(cursor=cursor, match=pattern, count=5000)
 
         # Pastikan semua key jadi string dan hanya ambil yang prefix-nya cocok
         clean_keys = []
