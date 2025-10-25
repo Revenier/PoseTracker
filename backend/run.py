@@ -20,12 +20,14 @@ def receive_pose():
             "message": "Invalid input — need 'posture' and 'mediapipe' list."
         }), 400
     
+    # Load reference data dari redis (contoh: "situp:landmark:*")
     try:
         ref_landmarks_all = get_ref_landmarks(posture)  # np.array (N,99)
     except Exception as e:
         ref_landmarks_all = None
         print(f"[WARN] gagal load landmark ref: {e}")
 
+    # Load reference data dari angles (contoh: "situp:angles:*")
     try:
         ref_angles_all = get_ref_angles(posture)  # np.array (N,7)
     except Exception as e:
