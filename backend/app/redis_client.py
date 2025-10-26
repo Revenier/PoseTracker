@@ -79,20 +79,3 @@ def load_feature_matrix(posture: str, data_type: Literal["landmark", "angle"], *
         flush=True
     )
     return np.asarray(rows, dtype=dtype)
-
-
-def count_keys(posture: str, data_type: Literal["landmark", "angle"]) -> int:
-    """
-    Hitung jumlah key yang cocok untuk pola {posture}:{data_type}:* (read-only).
-    """
-    pattern = f"{posture}:{data_type}:*"
-    cursor = 0
-    total = 0
-
-    while True:
-        cursor, keys = r.scan(cursor=cursor, match=pattern, count=2000)
-        total += len(keys)
-        if cursor == 0:
-            break
-
-    return total
