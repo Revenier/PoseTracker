@@ -66,11 +66,20 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     if len(input_landmarks) != 99:
         return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
 
-    input_norm = normalize([input_landmarks], axis=1)
+    # input_norm = normalize([input_landmarks], axis=1)
+    # Reshape input into (33, 3) array 
+    # Dari [x1,y1,z1, x2,y2,z2, ...] jadi array seperti [[x1,y1,z1], [x2,y2,z2], ...].
+    input_pose = np.array(input_landmarks).reshape((33, 3))
+    # pusatin bahu dan samain arah bahu
+    input_pose = align_landmarks(input_pose)  
+    # input_pose.flatten(): ubah array 33×3 (pose yang sudah dirapikan) jadi satu baris panjang 99 angka
+    # "Menormalkan" baris, membagi setiap angka dengan panjang total vektor (akar kuadrat dari jumlah kuadrat semua angka), sehingga panjang vektor jadi 1.
+    input_norm = normalize([input_pose.flatten()], axis=1) 
 
     if ref_landmarks is None:
         ref_landmarks = get_ref_landmarks(posture)
     
+    print(f"Reference landmarks shape: {ref_landmarks.shape}")
     ref_norm = normalize(ref_landmarks, axis=1)
     if input_norm.shape[1] != ref_norm.shape[1]:
         return f"Input and reference dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}"
@@ -81,12 +90,17 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     print("\nDEBUG POSE:")
     print(f"Best similarity score: {best_score:.4f} at index {best_idx}")
     
-    VERY_GOOD = 0.9
-    GOOD = 0.8
-    POOR = 0.7
+    VERY_GOOD = 0.95
+    GOOD = 0.85
+    POOR = 0.75
 
     if best_score > VERY_GOOD:
-        result = "Correct form!"
+        result = {
+            "correct": True,
+            "status": "very_good",
+            "feedback": "Correct form!",
+            "score": best_score
+        }
     else:
         input_pose = input_norm[0].reshape(33, 3)
         ref_pose = ref_norm[best_idx].reshape(33, 3)
@@ -107,15 +121,32 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
         
         if issues:
             if best_score > GOOD:
+                correct = True
+                status = "good"
                 feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
+                score= best_score
             elif best_score > POOR:
+                correct = False
+                status = "poor"
                 feedback = f"Form needs work. Focus on {' and '.join(issues[:2])}"
+                score= best_score
             else:
+                correct = False
+                status = "incorrect"
                 feedback = f"Incorrect form. Major issues with {' and '.join(issues[:2])}"
+                score= best_score
         else:
+            correct = False
+            status = "incorrect"
             feedback = "Wrong form, try again!"
+            score= best_score
             
-        result = f"{feedback}"
+        result = {
+            "correct": correct,
+            "status": status,
+            "feedback": feedback,
+            "score": score
+        }
 
     total_time = time.time() - total_start
     print(f"[landmark_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
