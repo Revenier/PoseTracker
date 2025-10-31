@@ -21,10 +21,11 @@ def get_ref_from_redis(posture, data_type):
     return feats
 
 _REF_CACHE = {}
-USE_FAISS = True
+USE_FAISS = False
 
 def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
+     # ensure ref_norm precomputed and cached for posture
     if posture not in _REF_CACHE:
         # ref_landmarks shape: (N, 99) or (N, 33*3)
         ref_arr = np.asarray(ref_landmarks, dtype=np.float32)
@@ -55,18 +56,19 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     print("\nDEBUG POSE:")
     print(f"Best similarity score: {best_score:.4f} at index {best_idx}")
     
-    THRESHOLD_VERY_GOOD = 0.99
-    THRESHOLD_GOOD = 0.95
-    THRESHOLD_POOR = 0.90
+    VERY_GOOD = 0.95
+    GOOD = 0.85
+    POOR = 0.75
 
-    if best_score > THRESHOLD_VERY_GOOD:
+    if best_score > VERY_GOOD:
         result = {
             "correct": True,
             "status": "very_good",
             "feedback": "Correct form!",
+            "score": best_score
         }
     else:
-        input_pose = input_landmarks
+        input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
         ref_pose = ref_norm[best_idx].reshape(33, 3)
 
         body_parts = {
@@ -84,11 +86,11 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
                 issues.append(name)
         
         if issues:
-            if best_score > THRESHOLD_GOOD:
+            if best_score > GOOD:
                 correct = True
                 status = "good"
                 feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
-            elif best_score < THRESHOLD_GOOD and best_score >= THRESHOLD_POOR:
+            elif best_score > POOR:
                 correct = False
                 status = "poor"
                 feedback = f"Form needs work. Focus on {' and '.join(issues[:2])}"
