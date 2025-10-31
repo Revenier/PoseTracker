@@ -36,7 +36,7 @@ def row_id_hex(function_name: str, posture: str, row: np.ndarray) -> str:
 
 def normalize_and_align(ref_landmarks: np.ndarray) -> np.ndarray:
     """Normalize and align all landmark frames."""
-    ref_norm = normalize(ref_landmarks, axis=1)
+
     aligned_refs = []
     for ref in ref_landmarks:
         ref_pose = ref.reshape((33, 3))
