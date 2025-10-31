@@ -5,50 +5,12 @@ from sklearn.preprocessing import normalize
 from sklearn.metrics.pairwise import cosine_similarity
 import redis, json, numpy as np
 from app.redis_client import load_feature_matrix, r
-import time
-
-BACKEND = "redis"  # "csv" or "redis"
-TOTAL_LOAD_TIME = 0.0   
-
-def get_ref_landmarks(posture):
-    if BACKEND == "redis":
-        return get_ref_from_redis(posture, "landmarks")
-    else:
-        global TOTAL_LOAD_TIME
-        t0 = time.time()
-        ref = dl.posture_map[posture]["landmarks"]()
-        load_time = time.time() - t0
-        TOTAL_LOAD_TIME += load_time
-        print(f"[landmark_logic][{BACKEND.upper()}] Loaded {posture}:landmark in {load_time:.4f}s")
-        return np.asarray(ref, dtype=float)
-
-
-def get_ref_angles(posture):
-    if BACKEND == "redis":
-        return get_ref_from_redis(posture, "angles")
-    else:
-        global TOTAL_LOAD_TIME
-        t0 = time.time()
-        ref = dl.posture_map[posture]["angles"]()
-        load_time = time.time() - t0
-        TOTAL_LOAD_TIME += load_time
-        print(f"[angle_logic][{BACKEND.upper()}] Loaded {posture}:angle in {load_time:.4f}s")
-        arr = np.asarray(ref, dtype=float)
-        if arr.ndim == 1:
-            arr = arr.reshape(1, -1)
-        return arr
 
 def get_ref_from_redis(posture, data_type):
-    global TOTAL_LOAD_TIME
     alias = {"landmarks": "landmark", "angles": "angle"}
     dt = alias.get(str(data_type).lower(), str(data_type).lower())
 
-    # langsung ambil dari Redis
-    t0 = time.time()
     feats = load_feature_matrix(posture, dt)
-    load_time = time.time() - t0
-    TOTAL_LOAD_TIME += load_time
-
     # validasi hasil
     if feats.size == 0:
         raise ValueError(f"No reference data in Redis for {posture}:{dt}")
@@ -56,35 +18,55 @@ def get_ref_from_redis(posture, data_type):
     if feats.ndim != 2:
         feats = np.asarray(feats, dtype=float)
 
-    print(f"[{dt}_logic][{BACKEND.upper()}] ✅ Loaded {feats.shape[0]} samples for {posture}:{dt} in {load_time:.4f}s")
     return feats
 
-def landmark_logic(posture, input_landmarks, ref_landmarks=None):
-    total_start = time.time()
+_REF_CACHE = {}
+USE_FAISS = True
 
-    input_norm = normalize([input_landmarks.flatten()], axis=1) 
-    # ref_norm = normalize(ref_landmarks, axis=1)
-    ref_norm = ref_landmarks
-    sims = cosine_similarity(input_norm, ref_norm)[0]
-    best_score = np.max(sims)
-    best_idx = np.argmax(sims)
+def landmark_logic(posture, input_landmarks, ref_landmarks=None):
+
+    if posture not in _REF_CACHE:
+        # ref_landmarks shape: (N, 99) or (N, 33*3)
+        ref_arr = np.asarray(ref_landmarks, dtype=np.float32)
+        # if stored flattened shape might already be (N,99)
+        # normalize rows to unit length
+        norms = np.linalg.norm(ref_arr, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        ref_norm = ref_arr / norms
+        _REF_CACHE[posture] = ref_norm
+    else:
+        ref_norm = _REF_CACHE[posture]
+
+    # prepare query (flatten + normalize)
+    q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
+    q_norm = q / (np.linalg.norm(q) or 1.0)
+
+    # fast similarity via single matrix-vector product (cosine == dot for unit vectors)
+    sims = ref_norm.dot(q_norm)  # shape (N,)
+    best_idx = int(np.argmax(sims))
+    best_score = float(sims[best_idx])
+
+    # input_norm = normalize([input_landmarks.flatten()], axis=1) 
+    # ref_norm = ref_landmarks
+    # sims = cosine_similarity(input_norm, ref_norm)[0]
+    # best_score = np.max(sims)
+    # best_idx = np.argmax(sims)
 
     print("\nDEBUG POSE:")
     print(f"Best similarity score: {best_score:.4f} at index {best_idx}")
     
-    VERY_GOOD = 0.95
-    GOOD = 0.85
-    POOR = 0.75
+    THRESHOLD_VERY_GOOD = 0.99
+    THRESHOLD_GOOD = 0.95
+    THRESHOLD_POOR = 0.90
 
-    if best_score > VERY_GOOD:
+    if best_score > THRESHOLD_VERY_GOOD:
         result = {
             "correct": True,
             "status": "very_good",
             "feedback": "Correct form!",
-            "score": best_score
         }
     else:
-        input_pose = input_norm[0].reshape(33, 3)
+        input_pose = input_landmarks
         ref_pose = ref_norm[best_idx].reshape(33, 3)
 
         body_parts = {
@@ -102,37 +84,28 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
                 issues.append(name)
         
         if issues:
-            if best_score > GOOD:
+            if best_score > THRESHOLD_GOOD:
                 correct = True
                 status = "good"
                 feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
-                score= best_score
-            elif best_score > POOR:
+            elif best_score < THRESHOLD_GOOD and best_score >= THRESHOLD_POOR:
                 correct = False
                 status = "poor"
                 feedback = f"Form needs work. Focus on {' and '.join(issues[:2])}"
-                score= best_score
             else:
                 correct = False
                 status = "incorrect"
                 feedback = f"Incorrect form. Major issues with {' and '.join(issues[:2])}"
-                score= best_score
         else:
             correct = False
             status = "incorrect"
             feedback = "Wrong form, try again!"
-            score= best_score
             
         result = {
             "correct": correct,
             "status": status,
             "feedback": feedback,
-            "score": score
         }
-
-    total_time = time.time() - total_start
-    print(f"[landmark_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
-    print(f"[GLOBAL][{BACKEND.upper()}] ⏱ CUMULATIVE LOAD TIME: {TOTAL_LOAD_TIME:.4f}s")
 
     return result
 
@@ -169,8 +142,6 @@ def align_landmarks(landmarks):
     return aligned
 
 def angle_logic(posture, input_data, ref_angles=None):
-    total_start = time.time()
-
     angle_indices = [
         (14, 12, 24),  # right_elbow, right_shoulder, right_hip
         (13, 11, 23),  # left_elbow, left_shoulder, left_hip
@@ -219,8 +190,4 @@ def angle_logic(posture, input_data, ref_angles=None):
             "feedback": "Correct posture!",
         }
     
-    total_time = time.time() - total_start
-    print(f"[angle_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")
-    print(f"[GLOBAL][{BACKEND.upper()}] ⏱ CUMULATIVE LOAD TIME: {TOTAL_LOAD_TIME:.4f}s")
-
     return result

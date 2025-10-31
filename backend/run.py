@@ -2,19 +2,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from app.group import group_landmark_feedback, group_angle_feedback
-from app.logic import landmark_logic, angle_logic, get_ref_landmarks, get_ref_angles, align_landmarks
+from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
 from app import data_loader as dl
 
 REFERENCE_DATA = {}
 def load_reference_data():
     global REFERENCE_DATA
     
-    postures = ["push_up", "situp", "squat", "pull_up", "jumping_jack"]
+    postures = ["push_up", "situp", "squat", "jumping_jack"]
     
     for posture in postures:
         try:
-            landmarks = get_ref_landmarks(posture)
-            angles = get_ref_angles(posture)
+            landmarks = get_ref_from_redis(posture, "landmarks")
+            angles = get_ref_from_redis(posture, "angles")
             REFERENCE_DATA[posture] = {
                 "landmarks": landmarks,
                 "angles": angles,
@@ -64,22 +64,26 @@ def receive_pose():
     # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
     for idx, arr in enumerate(mediapipe, start=1):
         try:
+            if not isinstance(arr, list):
+                raise ValueError(f"Frame {idx}: Input must be a list, got {type(arr)}")
+            
             if len(arr) != 99:
-                raise ValueError(f"Expected 99 values, got {len(arr)}")
+                raise ValueError(f"Frame {idx}: Expected 99 coordinates (33 landmarks × 3), got {len(arr)}")
+            
 
             array = align_landmarks(np.array(arr).reshape((33, 3)))
-            angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
+            # angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
             landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
 
             # Determine if pose is correct (both angle and landmark must be correct)
             is_correct = (
-                isinstance(angle_result, dict) and angle_result.get('correct', False) and
+                # isinstance(angle_result, dict) and angle_result.get('correct', False) and
                 isinstance(landmark_result, dict) and landmark_result.get('correct', False)
             )
 
             results.append({
                 "index": idx,
-                "angles": angle_result,
+                # "angles": angle_result,
                 "landmarks": landmark_result,
                 "correct": is_correct
             })
@@ -88,11 +92,22 @@ def receive_pose():
                 correct_count += 1
 
         except Exception as e:
-            print(f"Error processing frame {idx}: {str(e)}")
+            print(f"Error processing frame {idx}:")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Error message: {str(e)}")
+            # Add the traceback for debugging
+            import traceback
+            print(f"Traceback:\n{traceback.format_exc()}")
+            
             results.append({
                 "index": idx,
                 "status": "error",
-                "message": str(e)
+                "message": str(e),
+                "debug_info": {
+                    "data_type": str(type(arr)),
+                    "data_length": len(arr) if isinstance(arr, (list, np.ndarray)) else None,
+                    "error_type": type(e).__name__
+                }
         })
 
     total = len(results)
