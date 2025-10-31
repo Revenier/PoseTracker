@@ -38,7 +38,6 @@ def get_ref_angles(posture):
             arr = arr.reshape(1, -1)
         return arr
 
-# TODO: cek lagi functionnnya bener ga buat ambil semua data dr redis, tolong sesuaiin sama punya lu. 
 def get_ref_from_redis(posture, data_type):
     global TOTAL_LOAD_TIME
     alias = {"landmarks": "landmark", "angles": "angle"}
@@ -63,26 +62,9 @@ def get_ref_from_redis(posture, data_type):
 def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     total_start = time.time()
 
-    if len(input_landmarks) != 99:
-        return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_landmarks)})'}
-
-    # input_norm = normalize([input_landmarks], axis=1)
-    # Reshape input into (33, 3) array 
-    # Dari [x1,y1,z1, x2,y2,z2, ...] jadi array seperti [[x1,y1,z1], [x2,y2,z2], ...].
-    input_pose = np.array(input_landmarks).reshape((33, 3))
-    # pusatin bahu dan samain arah bahu
-    input_pose = align_landmarks(input_pose)  
-    # input_pose.flatten(): ubah array 33×3 (pose yang sudah dirapikan) jadi satu baris panjang 99 angka
-    # "Menormalkan" baris, membagi setiap angka dengan panjang total vektor (akar kuadrat dari jumlah kuadrat semua angka), sehingga panjang vektor jadi 1.
-    input_norm = normalize([input_pose.flatten()], axis=1) 
-
-    if ref_landmarks is None:
-        ref_landmarks = get_ref_landmarks(posture)
-    
-    print(f"Reference landmarks shape: {ref_landmarks.shape}")
-    ref_norm = normalize(ref_landmarks, axis=1)
-    if input_norm.shape[1] != ref_norm.shape[1]:
-        return f"Input and reference dimensions do not match: {input_norm.shape[1]} vs {ref_norm.shape[1]}"
+    input_norm = normalize([input_landmarks.flatten()], axis=1) 
+    # ref_norm = normalize(ref_landmarks, axis=1)
+    ref_norm = ref_landmarks
     sims = cosine_similarity(input_norm, ref_norm)[0]
     best_score = np.max(sims)
     best_idx = np.argmax(sims)
@@ -114,7 +96,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
         }
         
         issues = []
-        for body_part, (indices, name) in body_parts.items():
+        for body_parts, (indices, name) in body_parts.items():
             part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
             if part_diff > 0.1: 
                 issues.append(name)
@@ -189,19 +171,6 @@ def align_landmarks(landmarks):
 def angle_logic(posture, input_data, ref_angles=None):
     total_start = time.time()
 
-    # 1. Check if the posture is valid
-    # if posture not in dl.posture_map:
-    #     return {'status': 'error', 'message': 'Unknown posture'}
-
-    # 2. Check if input_data has 99 values (33 points * 3 coords)
-    if len(input_data) != 99:
-        return {'status': 'error', 'message': f'Input data must have 99 values (got {len(input_data)})'}
-
-    # 3. Group into (33, 3) array
-    landmarks = np.array(input_data).reshape((33, 3))
-    landmarks = align_landmarks(landmarks)
-
-    # 4. Calculate angles for specific joints (example indices)
     angle_indices = [
         (14, 12, 24),  # right_elbow, right_shoulder, right_hip
         (13, 11, 23),  # left_elbow, left_shoulder, left_hip
@@ -218,13 +187,8 @@ def angle_logic(posture, input_data, ref_angles=None):
 
     input_angles = []
     for a, b, c in angle_indices:
-        input_angles.append(calculate_angle(landmarks[a], landmarks[b], landmarks[c]))
+        input_angles.append(calculate_angle(input_data[a], input_data[b], input_data[c]))
     input_angles = np.array(input_angles)
-
-    # TODO: (DONE) (NEED CHECK)  ref_angles should be load from redis cache
-
-    if ref_angles is None:
-        ref_angles = get_ref_angles(posture)
 
     # Find the closest reference frame (smallest total angle difference)
     diffs_all = np.abs(ref_angles - input_angles)
@@ -235,13 +199,25 @@ def angle_logic(posture, input_data, ref_angles=None):
     wrong_indices = np.where(diffs > 15)[0]  # threshold for "wrong"
 
     if len(wrong_indices) >= 3:
-        result = f"You're not doing a {posture.replace('_', ' ')}. Please check your form."
+        result = {
+            "correct": False,
+            "status": "major_issues",
+            "feedback": f"You're not doing a {posture.replace('_', ' ')}. Please check your form.",
+        }
     elif len(wrong_indices) > 0:
         max_idx = wrong_indices[np.argmax(diffs[wrong_indices])]
         suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {best_ref[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
-        result = f"Incorrect posture, try again! {suggestion}"
+        result = {
+            "correct": False,
+            "status": "minor_issues",
+            "feedback": f"Incorrect posture, try again! {suggestion}",
+        }
     else:
-        result = "Correct posture!"
+        result = {
+            "correct": True,
+            "status": "correct",
+            "feedback": "Correct posture!",
+        }
     
     total_time = time.time() - total_start
     print(f"[angle_logic][{BACKEND.upper()}] 🕒 Total processing time: {total_time:.4f}s")

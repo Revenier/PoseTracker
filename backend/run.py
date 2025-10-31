@@ -2,11 +2,39 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 from app.group import group_landmark_feedback, group_angle_feedback
-from app.logic import landmark_logic, angle_logic, get_ref_landmarks, get_ref_angles
+from app.logic import landmark_logic, angle_logic, get_ref_landmarks, get_ref_angles, align_landmarks
 from app import data_loader as dl
 
-app = Flask(__name__)
-CORS(app)
+REFERENCE_DATA = {}
+def load_reference_data():
+    global REFERENCE_DATA
+    
+    postures = ["push_up", "situp", "squat", "pull_up", "jumping_jack"]
+    
+    for posture in postures:
+        try:
+            landmarks = get_ref_landmarks(posture)
+            angles = get_ref_angles(posture)
+            REFERENCE_DATA[posture] = {
+                "landmarks": landmarks,
+                "angles": angles,
+                "loaded_at": np.datetime64('now')
+            }
+            print(f"Loaded reference data for {posture}")
+        except Exception as e:
+            print(f"Failed to load reference data for {posture}: {e}")
+
+def create_app():
+    app = Flask(__name__)
+    CORS(app)
+
+    print("Loading reference data...")
+    load_reference_data()
+    print("Initialization complete!")
+    
+    return app
+
+app = create_app()
 
 @app.route('/pose', methods=['POST'])
 def receive_pose():
@@ -20,62 +48,52 @@ def receive_pose():
             "message": "Invalid input — need 'posture' and 'mediapipe' list."
         }), 400
     
-    # Load reference data dari redis (contoh: "situp:landmark:*")
-    try:
-        ref_landmarks_all = get_ref_landmarks(posture)  # np.array (N,99)
-    except Exception as e:
-        ref_landmarks_all = None
-        print(f"[WARN] gagal load landmark ref: {e}")
+    if posture not in REFERENCE_DATA:
+        return ({
+            "status": "error",
+            "message": f"Unknown posture: {posture}"
+        }), 400
 
-    # Load reference data dari angles (contoh: "situp:angles:*")
-    try:
-        ref_angles_all = get_ref_angles(posture)  # np.array (N,7)
-    except Exception as e:
-        ref_angles_all = None
-        print(f"[WARN] gagal load angle ref: {e}")
-
+    ref_landmarks_all = REFERENCE_DATA[posture]["landmarks"]
+    ref_angles_all = REFERENCE_DATA[posture]["angles"]
+    
     
     results = []
     correct_count = 0
 
     # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
     for idx, arr in enumerate(mediapipe, start=1):
-        print(f"\n[Data {idx}] Processing posture={posture} | Input length={len(arr)}\n", flush=True)   
         try:
-            angle_result = angle_logic(posture, arr, ref_angles=ref_angles_all)
-            landmark_result = landmark_logic(posture, arr, ref_landmarks=ref_landmarks_all)
+            if len(arr) != 99:
+                raise ValueError(f"Expected 99 values, got {len(arr)}")
+
+            array = align_landmarks(np.array(arr).reshape((33, 3)))
+            angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
+            landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
+
+            # Determine if pose is correct (both angle and landmark must be correct)
+            is_correct = (
+                isinstance(angle_result, dict) and angle_result.get('correct', False) and
+                isinstance(landmark_result, dict) and landmark_result.get('correct', False)
+            )
+
+            results.append({
+                "index": idx,
+                "angles": angle_result,
+                "landmarks": landmark_result,
+                "correct": is_correct
+            })
+
+            if is_correct:
+                correct_count += 1
+
         except Exception as e:
+            print(f"Error processing frame {idx}: {str(e)}")
             results.append({
                 "index": idx,
                 "status": "error",
                 "message": str(e)
-            })
-            continue
-
-        # tentuin apakah array ini dianggap benar
-        feedback = ""
-        is_correct = False
-
-        if isinstance(landmark_result, dict):
-            feedback = landmark_result.get("feedback", "")
-            if "Correct" in feedback:
-                is_correct = True
-
-        elif isinstance(landmark_result, str):
-            feedback = landmark_result
-            if "Correct" in feedback:
-                is_correct = True
-
-        results.append({
-            "index": idx,
-            "angles": angle_result,
-            "landmarks": landmark_result,
-            "feedback": feedback,
-            "correct": is_correct
         })
-
-        if is_correct:
-            correct_count += 1
 
     total = len(results)
     summary = {
