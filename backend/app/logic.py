@@ -27,13 +27,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
      # ensure ref_norm precomputed and cached for posture
     if posture not in _REF_CACHE:
-        # ref_landmarks shape: (N, 99) or (N, 33*3)
-        ref_arr = np.asarray(ref_landmarks, dtype=np.float32)
-        # if stored flattened shape might already be (N,99)
-        # normalize rows to unit length
-        norms = np.linalg.norm(ref_arr, axis=1, keepdims=True)
-        norms[norms == 0] = 1.0
-        ref_norm = ref_arr / norms
+        ref_norm = normalize(ref_landmarks, axis=1)
         _REF_CACHE[posture] = ref_norm
     else:
         ref_norm = _REF_CACHE[posture]
@@ -42,71 +36,71 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
     q_norm = q / (np.linalg.norm(q) or 1.0)
 
-    # fast similarity via single matrix-vector product (cosine == dot for unit vectors)
-    sims = ref_norm.dot(q_norm)  # shape (N,)
+    sims = ref_norm.dot(q_norm) 
     best_idx = int(np.argmax(sims))
     best_score = float(sims[best_idx])
-
-    # input_norm = normalize([input_landmarks.flatten()], axis=1) 
-    # ref_norm = ref_landmarks
-    # sims = cosine_similarity(input_norm, ref_norm)[0]
-    # best_score = np.max(sims)
-    # best_idx = np.argmax(sims)
-
-    print("\nDEBUG POSE:")
-    print(f"Best similarity score: {best_score:.4f} at index {best_idx}")
     
-    VERY_GOOD = 0.95
-    GOOD = 0.85
-    POOR = 0.75
+    VERY_GOOD = 0.99
+    GOOD = 0.96
+    POOR = 0.93
 
+    input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
+    ref_pose = ref_norm[best_idx].reshape(33, 3)
+
+    body_parts = {
+        'arms': ([11,13,15,12,14,16], "arm position"),
+        'legs': ([23,25,27,24,26,28], "leg position"),
+        'torso': ([11,12,23,24], "body alignment"),
+        'shoulders': ([11,12], "shoulder level"),
+        'hips': ([23,24], "hip position")
+    }
+        
+    issues = []
+    difference = {} 
+    
+    for part_name, (indices, name) in body_parts.items():
+        part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
+        difference[part_name] = float(part_diff) 
+        if part_diff > 0.01: 
+            issues.append(name)
+        
     if best_score > VERY_GOOD:
         result = {
             "correct": True,
             "status": "Very Good",
             "feedback": "Perfect form! Keep it up!",
-            "score": best_score
+            "score": best_score,
+            "body_part_difference": difference
         }
-    else:
-        input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
-        ref_pose = ref_norm[best_idx].reshape(33, 3)
 
-        body_parts = {
-            'arms': ([11,13,15,12,14,16], "arm position"),
-            'legs': ([23,25,27,24,26,28], "leg position"),
-            'torso': ([11,12,23,24], "body alignment"),
-            'shoulders': ([11,12], "shoulder level"),
-            'hips': ([23,24], "hip position")
-        }
-        
-        issues = []
-        for body_parts, (indices, name) in body_parts.items():
-            part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-            if part_diff > 0.1: 
-                issues.append(name)
-        
-        if issues:
-            if best_score > GOOD:
-                correct = True
-                status = "Good"
-                feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
-            elif best_score > POOR:
-                correct = False
-                status = "Bad form"
-                feedback = f"Need improvement: {' and '.join(issues[:2])}"
-            else:
-                correct = False
-                status = "Poor form"
-                feedback = f"Focus on form: {' and '.join(issues[:2])}"
+    elif issues:
+        if best_score > GOOD:
+            correct = False
+            status = "Good"
+            feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
+        elif best_score > POOR:
+            correct = False
+            status = "Bad form"
+            feedback = f"Need improvement: {' and '.join(issues[:2])}"
         else:
             correct = False
-            status = "Incorrect"
-            feedback = "Wrong form, try again!"
-            
+            status = "Poor form"
+            feedback = f"Focus on form: {' and '.join(issues[:2])}"
+        
         result = {
             "correct": correct,
             "status": status,
             "feedback": feedback,
+            "score": best_score,
+            "body_part_difference": difference
+        }
+    else:
+        result = {
+            "correct": False,
+            "status": "Incorrect",
+            "feedback": "Wrong form, try again!",
+            "score": best_score,
+            "body_part_difference": difference
         }
 
     return result
