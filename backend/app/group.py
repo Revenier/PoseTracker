@@ -43,7 +43,7 @@ def group_landmark_feedback(results):
     
     # Format summary message
     if correct_count == total:
-        return "Perfect form throughout!"
+        return "Perfect form throughout! Keep it up!"
     elif len(all_feedback) > 0:
         # Take most frequent feedback or first one
         return f"Needs work: {all_feedback[0]}"
