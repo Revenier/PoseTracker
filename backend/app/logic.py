@@ -63,8 +63,8 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     if best_score > VERY_GOOD:
         result = {
             "correct": True,
-            "status": "very_good",
-            "feedback": "Correct form!",
+            "status": "Very Good",
+            "feedback": "Perfect form! Keep it up!",
             "score": best_score
         }
     else:
@@ -88,19 +88,19 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
         if issues:
             if best_score > GOOD:
                 correct = True
-                status = "good"
+                status = "Good"
                 feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
             elif best_score > POOR:
                 correct = False
-                status = "poor"
-                feedback = f"Form needs work. Focus on {' and '.join(issues[:2])}"
+                status = "Bad form"
+                feedback = f"Need improvement: {' and '.join(issues[:2])}"
             else:
                 correct = False
-                status = "incorrect"
-                feedback = f"Incorrect form. Major issues with {' and '.join(issues[:2])}"
+                status = "Poor form"
+                feedback = f"Focus on form: {' and '.join(issues[:2])}"
         else:
             correct = False
-            status = "incorrect"
+            status = "Incorrect"
             feedback = "Wrong form, try again!"
             
         result = {

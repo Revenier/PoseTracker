@@ -23,25 +23,39 @@ ANGLE_NAME_MAP = {
     (15, 13, 11): "left_wrist_angle",
 }
 
-def group_landmark_feedback(feedback_list):
-    # Collect all wrong indices from the batch
-    all_wrong_indices = []
-    for fb in feedback_list:
-        if isinstance(fb, dict) and 'wrong_indices' in fb:
-            all_wrong_indices.extend(fb['wrong_indices'])
-
-    if not all_wrong_indices:
-        return "Correct posture!"
-
-    # Count which body parts are most often wrong
-    body_parts = [bodyPartMap.get(idx, "unknown") for idx in all_wrong_indices]
-    part_counts = Counter(body_parts)
-    # Get the 2 most common mistakes
-    most_common = part_counts.most_common(2)
-
-    # Build feedback message
-    feedback_msgs = [f"Check your {part} (mistakes: {count})" for part, count in most_common]
-    return " | ".join(feedback_msgs)
+def group_landmark_feedback(results):
+    if not isinstance(results, list) or len(results) == 0:
+        return "No feedback available"
+    
+    # Count correct vs incorrect
+    correct_count = sum(1 for r in results if r.get('correct', True))
+    total = len(results)
+    
+    # Collect all feedback from incorrect poses
+    all_feedback = []
+    for result in results:
+        if isinstance(result, dict) and 'landmarks' in result:
+            landmark_data = result['landmarks']
+            if not landmark_data.get('correct', False):
+                feedback = landmark_data.get('feedback')
+                if feedback:
+                    all_feedback.append(feedback)
+    
+    # Format summary message
+    if correct_count == total:
+        return "Perfect form throughout!"
+    elif len(all_feedback) > 0:
+        # Take most frequent feedback or first one
+        return f"Needs work: {all_feedback[0]}"
+    else:
+        return f"wrong posture. Needs improvement {all_feedback[0]}."
+    
+    # Format summary message
+    if correct_count == total:
+        return "Perfect form throughout!"
+    else:
+        return f"Needs improvement ({correct_count}/{total}). {all_feedback[0]} "
+    
 
 def group_angle_feedback(feedback_list):
     # Collect all wrong angle indices from the batch

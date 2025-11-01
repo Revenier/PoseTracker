@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
-from app.group import group_landmark_feedback, group_angle_feedback
+from app.group import group_landmark_feedback
 from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
 from app import data_loader as dl
 
@@ -75,20 +75,12 @@ def receive_pose():
             # angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
             landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
 
-            # Determine if pose is correct (both angle and landmark must be correct)
-            is_correct = (
-                # isinstance(angle_result, dict) and angle_result.get('correct', False) and
-                isinstance(landmark_result, dict) and landmark_result.get('correct', False)
-            )
-
             results.append({
                 "index": idx,
-                # "angles": angle_result,
-                "landmarks": landmark_result,
-                "correct": is_correct
+                "landmarks": landmark_result
             })
-
-            if is_correct:
+            
+            if landmark_result.get('correct', False):
                 correct_count += 1
 
         except Exception as e:
@@ -116,39 +108,13 @@ def receive_pose():
         "correct": correct_count,
         "incorrect": total - correct_count,
         "posture": posture,
-        "summary_result": (
-            "All Correct ✅" if correct_count == total else
-            ("Some Incorrect ❌" if correct_count > 0 else "All Failed ⚠️")
-        )
     }
-
-    # grouped feedback
-    # feedback_list_for_grouping = []
-    # angle_wrong_indices = []
-    # if isinstance(angle_result, dict) and 'wrong_indices' in angle_result:
-    #     angle_wrong_indices.extend(angle_result['wrong_indices'])
-        
-    # feedback_list_for_grouping.append({'wrong_indices': landmark_result.get('wrong_indices', []) if isinstance(landmark_result, dict) else []})
-    # grouped_landmark_feedback = group_landmark_feedback(feedback_list_for_grouping)
-    # grouped_angle_feedback = group_angle_feedback(angle_wrong_indices)
-
-    # Combine feedback if both have issues not working yet
-    # if "Correct" in grouped_landmark_feedback and "correct" in grouped_angle_feedback.lower():
-    #     final_feedback = "All poses correct!"
-    # else:
-    #     feedback_parts = []
-    #     if "Correct" not in grouped_landmark_feedback:
-    #         feedback_parts.append(grouped_landmark_feedback)
-    #     if "correct" not in grouped_angle_feedback.lower():
-    #         feedback_parts.append(grouped_angle_feedback)
-    #     final_feedback = " | ".join(feedback_parts)
 
     return ({
         "status": "success",
         "summary": summary,
-        "details": results,
-        "formated_feedback": "",
-        "grouped_feedback": ""
+        "formated_feedback": results,
+        "grouped_feedback": group_landmark_feedback(results),
     }), 200
 
 
