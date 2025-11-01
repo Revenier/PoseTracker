@@ -28,7 +28,7 @@ def group_landmark_feedback(results):
         return "No feedback available"
     
     # Count correct vs incorrect
-    correct_count = sum(1 for r in results if r.get('correct', True))
+    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
     total = len(results)
     
     # Collect all feedback from incorrect poses
@@ -48,14 +48,8 @@ def group_landmark_feedback(results):
         # Take most frequent feedback or first one
         return f"Needs work: {all_feedback[0]}"
     else:
-        return f"wrong posture. Needs improvement {all_feedback[0]}."
-    
-    # Format summary message
-    if correct_count == total:
-        return "Perfect form throughout!"
-    else:
-        return f"Needs improvement ({correct_count}/{total}). {all_feedback[0]} "
-    
+        return f"wrong posture."
+        
 
 def group_angle_feedback(feedback_list):
     # Collect all wrong angle indices from the batch

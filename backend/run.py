@@ -3,7 +3,6 @@ from flask_cors import CORS
 import numpy as np
 from app.group import group_landmark_feedback
 from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
-from app import data_loader as dl
 
 REFERENCE_DATA = {}
 def load_reference_data():
