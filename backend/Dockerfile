@@ -12,6 +12,4 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # # Jalankan file run.py
-# CMD ["python", "run.py"]
-
-CMD python preloaded_normalized_data.py && python run.py
+CMD ["python", "run.py"]
