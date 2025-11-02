@@ -3,6 +3,7 @@ from flask_cors import CORS
 import numpy as np
 from app.group import group_landmark_feedback
 from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
+import threading
 
 REFERENCE_DATA = {}
 def load_reference_data():
@@ -27,9 +28,24 @@ def create_app():
     app = Flask(__name__)
     CORS(app)
 
-    print("Loading reference data...")
-    load_reference_data()
-    print("Initialization complete!")
+    READY = {"done": False}
+
+    def _bootstrap():
+        try:
+            print("Loading reference data (will preload if needed)...")
+            # 1) isi Redis dulu (kalau kamu memang perlu)
+            try:
+                import preloaded_normalized_data as pre  # kalau mau preload Redis dari CSV
+                pre.main()  # <-- kalau gak mau preload, baris ini bisa kamu komen
+            except Exception as e:
+                print(f"(skip preload or already done) {e}")
+            # 2) isi REFERENCE_DATA global
+            load_reference_data()
+            print("Initialization complete!")
+        finally:
+            READY["done"] = True
+
+    threading.Thread(target=_bootstrap, daemon=True).start()
     
     return app
 
