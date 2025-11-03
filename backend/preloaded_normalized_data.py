@@ -1,3 +1,5 @@
+print("[DEBUG] preloaded_normalized_data.py has been accessed.", flush=True)
+
 import argparse
 import hashlib
 import os
@@ -57,13 +59,14 @@ def save_rows(r, posture, data_type, function_name, rows):
         inserted = r.set(key, value, nx=True)
         if inserted:
             new_cnt += 1
-            status = "New"
+            # status = "New"
         else:
             found_cnt += 1
-            status = "Found"
+            # status = "Found"
 
-        print(f"[{status}] {data_type} row {idx} -> {key}")
+        # print(f"[{status}] {data_type} row {idx} -> {key}")
 
+    print(f"📊 {posture:<12} | {data_type:<9} → total={len(rows)}, new={new_cnt}, found={found_cnt}")
     return new_cnt, found_cnt, len(rows)
 
 
@@ -91,10 +94,10 @@ def main():
             print(" -", p)
         sys.exit(1)
     else:
-        print(f"📁 data_per_pose digunakan: {data_dir}")
+        print(f"📁 data_per_pose digunakan: {data_dir}",flush=True)
 
     r = get_redis()
-    print(f"✅ Connected to Redis ({REDIS_HOST}:{REDIS_PORT}, db={REDIS_DB})")
+    print(f"✅ Connected to Redis ({REDIS_HOST}:{REDIS_PORT}, db={REDIS_DB})", flush=True)
 
     poses = ["jumping_jack", "push_up", "situp", "squat"]
 
@@ -103,7 +106,7 @@ def main():
     total_rows = 0
 
     for posture in poses:
-        print(f"\n=== 🏋️ Normalizing + Uploading posture: {posture} ===")
+        print(f"\n=== 🏋️ Normalizing + Uploading posture: {posture} ===", flush=True)
 
         lm_path = data_dir / f"{posture}_landmarks_raw.csv"
         if not lm_path.is_file():
@@ -115,7 +118,7 @@ def main():
         normalized_landmarks = normalize_and_align(landmarks)
 
         lm_new, lm_found, lm_total = save_rows(r, posture, "landmark", "landmark_logic", normalized_landmarks)
-        print(f"🔎 Landmarks: total_rows={lm_total}, new={lm_new}, found={lm_found}")
+        print(f"🔎 Landmarks: total_rows={lm_total}, new={lm_new}, found={lm_found}", flush= True)
 
         total_new += lm_new
         total_found += lm_found
@@ -134,8 +137,8 @@ def main():
         else:
             print("ℹ️  Angles file tidak ditemukan — dilewati.")
 
-    print("\n✅ Selesai preload data normalized ke Redis.")
-    print(f"📊 TOTAL KESELURUHAN → total_rows={total_rows}, new={total_new}, found_duplicate={total_found}")
+    print("\n✅ Selesai preload data normalized ke Redis.", flush=True)
+    print(f"📊 TOTAL KESELURUHAN → total_rows={total_rows}, new={total_new}, found_duplicate={total_found}",flush=True)
 
 
 if __name__ == "__main__":
