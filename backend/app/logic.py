@@ -38,7 +38,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
     sims = ref_norm.dot(q_norm) 
     best_idx = int(np.argmax(sims))
-    best_score = float(sims[best_idx])
+    best_score = round(float(sims[best_idx]), 4)
     
     VERY_GOOD = 0.99
     GOOD = 0.96
@@ -56,11 +56,9 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     }
         
     issues = []
-    difference = {} 
     
     for part_name, (indices, name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-        difference[part_name] = float(part_diff) 
         if part_diff > 0.01: 
             issues.append(name)
         
@@ -70,7 +68,6 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             "status": "Very Good",
             "feedback": "Perfect form! Keep it up!",
             "score": best_score,
-            "body_part_difference": difference
         }
 
     elif issues:
@@ -92,7 +89,6 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             "status": status,
             "feedback": feedback,
             "score": best_score,
-            "body_part_difference": difference
         }
     else:
         result = {
@@ -100,7 +96,6 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             "status": "Incorrect",
             "feedback": "Wrong form, try again!",
             "score": best_score,
-            "body_part_difference": difference
         }
 
     return result

@@ -59,13 +59,13 @@ def receive_pose():
 
     if not posture or not isinstance(mediapipe, list) or len(mediapipe) == 0:
         return ({
-            "status": "error",
+            "status": False,
             "message": "Invalid input — need 'posture' and 'mediapipe' list."
         }), 400
     
     if posture not in REFERENCE_DATA:
         return ({
-            "status": "error",
+            "status": False,
             "message": f"Unknown posture: {posture}"
         }), 400
 
@@ -108,7 +108,7 @@ def receive_pose():
             
             results.append({
                 "index": idx,
-                "status": "error",
+                "status": False,
                 "message": str(e),
                 "debug_info": {
                     "data_type": str(type(arr)),
@@ -118,18 +118,23 @@ def receive_pose():
         })
 
     total = len(results)
-    summary = {
-        "total_inputs": total,
-        "correct": correct_count,
-        "incorrect": total - correct_count,
-        "posture": posture,
-    }
+    # summary = {
+    #     "total_inputs": total,
+    #     "correct": correct_count,
+    #     "incorrect": total - correct_count,
+    #     "posture": posture,
+    # }
+
+    if(correct_count > (total-correct_count)):
+        status = True
+    else:
+        status = False
 
     return ({
-        "status": "success",
-        "summary": summary,
-        "formated_feedback": results,
-        "grouped_feedback": group_landmark_feedback(results),
+        "status": status,
+        # "summary": summary,
+        "fullFeedback": results,
+        "formattedFeedback": group_landmark_feedback(results),
     }), 200
 
 
