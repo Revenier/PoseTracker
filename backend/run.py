@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
-from app.group import group_landmark_feedback
+from app.group import group_landmark_feedback, formatted_feedback
 from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
 import threading
 
@@ -133,7 +133,7 @@ def receive_pose():
     return ({
         "status": status,
         # "summary": summary,
-        "fullFeedback": results,
+        "fullFeedback": formatted_feedback(results),
         "formattedFeedback": group_landmark_feedback(results),
     }), 200
 

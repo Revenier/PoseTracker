@@ -23,82 +23,82 @@ def get_ref_from_redis(posture, data_type):
 _REF_CACHE = {}
 USE_FAISS = False
 
-def landmark_logic(posture, input_landmarks, ref_landmarks=None):
+# def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
-     # ensure ref_norm precomputed and cached for posture
-    if posture not in _REF_CACHE:
-        ref_norm = normalize(ref_landmarks, axis=1)
-        _REF_CACHE[posture] = ref_norm
-    else:
-        ref_norm = _REF_CACHE[posture]
+#      # ensure ref_norm precomputed and cached for posture
+#     if posture not in _REF_CACHE:
+#         ref_norm = normalize(ref_landmarks, axis=1)
+#         _REF_CACHE[posture] = ref_norm
+#     else:
+#         ref_norm = _REF_CACHE[posture]
 
-    # prepare query (flatten + normalize)
-    q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
-    q_norm = q / (np.linalg.norm(q) or 1.0)
+#     # prepare query (flatten + normalize)
+#     q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
+#     q_norm = q / (np.linalg.norm(q) or 1.0)
 
-    sims = ref_norm.dot(q_norm) 
-    best_idx = int(np.argmax(sims))
-    best_score = round(float(sims[best_idx]), 4)
+#     sims = ref_norm.dot(q_norm) 
+#     best_idx = int(np.argmax(sims))
+#     best_score = round(float(sims[best_idx]), 4)
     
-    VERY_GOOD = 0.99
-    GOOD = 0.96
-    POOR = 0.93
+#     VERY_GOOD = 0.99
+#     GOOD = 0.96
+#     POOR = 0.93
 
-    input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
-    ref_pose = ref_norm[best_idx].reshape(33, 3)
+#     input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
+#     ref_pose = ref_norm[best_idx].reshape(33, 3)
 
-    body_parts = {
-        'arms': ([11,13,15,12,14,16], "arm position"),
-        'legs': ([23,25,27,24,26,28], "leg position"),
-        'torso': ([11,12,23,24], "body alignment"),
-        'shoulders': ([11,12], "shoulder level"),
-        'hips': ([23,24], "hip position")
-    }
+#     body_parts = {
+#         'arms': ([11,13,15,12,14,16], "arm position"),
+#         'legs': ([23,25,27,24,26,28], "leg position"),
+#         'torso': ([11,12,23,24], "body alignment"),
+#         'shoulders': ([11,12], "shoulder level"),
+#         'hips': ([23,24], "hip position")
+#     }
         
-    issues = []
+#     issues = []
     
-    for part_name, (indices, name) in body_parts.items():
-        part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-        if part_diff > 0.01: 
-            issues.append(name)
+#     for part_name, (indices, name) in body_parts.items():
+#         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
+#         if part_diff > 0.01: 
+#             issues.append(name)
         
-    if best_score > VERY_GOOD:
-        result = {
-            "correct": True,
-            "status": "Very Good",
-            "feedback": "Perfect form! Keep it up!",
-            "score": best_score,
-        }
+#     if best_score > VERY_GOOD:
+#         result = {
+#             "correct": True,
+#             "status": "Perfect form",
+#             "feedback": "Perfect form! Keep it up!",
+#             "score": best_score,
+#         }
 
-    elif issues:
-        if best_score > GOOD:
-            correct = False
-            status = "Good"
-            feedback = f"Almost there! Check your {' and '.join(issues[:2])}"
-        elif best_score > POOR:
-            correct = False
-            status = "Bad form"
-            feedback = f"Need improvement: {' and '.join(issues[:2])}"
-        else:
-            correct = False
-            status = "Poor form"
-            feedback = f"Focus on form: {' and '.join(issues[:2])}"
+#     elif issues:
+#         if best_score > GOOD:
+#             correct = False
+#             status = "Good form"
+#             feedback = f"Check your {' and '.join(issues[:2])}"
+#         elif best_score > POOR:
+#             correct = False
+#             status = "Bad form"
+#             feedback = f"Improve your {' and '.join(issues[:2])}"
+#         else:
+#             correct = False
+#             status = "Poor form"
+#             feedback = f"Focus on form: {' and '.join(issues[:2])}"
         
-        result = {
-            "correct": correct,
-            "status": status,
-            "feedback": feedback,
-            "score": best_score,
-        }
-    else:
-        result = {
-            "correct": False,
-            "status": "Incorrect",
-            "feedback": "Wrong form, try again!",
-            "score": best_score,
-        }
+#         result = {
+#             "correct": correct,
+#             "status": status,
+#             "feedback": feedback,
+#             "score": best_score,
+#         }
+#     else:
+#         result = {
+#             "correct": False,
+#             "status": "Incorrect",
+#             "feedback": "Wrong form, try again!",
+#             "score": best_score,
+#         }
 
-    return result
+#     return result
 
 def calculate_angle(a, b, c):
     ba = a - b
@@ -182,3 +182,246 @@ def angle_logic(posture, input_data, ref_angles=None):
         }
     
     return result
+
+
+# new logic landmark
+
+def landmark_logic(posture, input_landmarks, ref_landmarks=None):
+
+    # ensure ref_norm precomputed and cached for posture
+    if posture not in _REF_CACHE:
+        ref_norm = normalize(ref_landmarks, axis=1)
+        _REF_CACHE[posture] = ref_norm
+    else:
+        ref_norm = _REF_CACHE[posture]
+
+    # prepare query (flatten + normalize)
+    q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
+    q_norm = q / (np.linalg.norm(q) or 1.0)
+
+    sims = ref_norm.dot(q_norm) 
+    best_idx = int(np.argmax(sims))
+    best_score = round(float(sims[best_idx]), 4)
+    
+    VERY_GOOD = 0.99
+    GOOD = 0.96
+    POOR = 0.93
+
+    input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
+    ref_pose = ref_norm[best_idx].reshape(33, 3)
+
+    # Body part definitions
+    body_parts = {
+        'arms': ([11,13,15,12,14,16], "arms"),
+        'legs': ([23,25,27,24,26,28], "legs"),
+        'torso': ([11,12,23,24], "torso"),
+        'shoulders': ([11,12], "shoulders"),
+        'hips': ([23,24], "hips")
+    }
+    
+    # Calculate shoulder width as reference for relative measurements
+    shoulder_width_input = np.linalg.norm(input_pose[11] - input_pose[12])
+    shoulder_width_ref = np.linalg.norm(ref_pose[11] - ref_pose[12])
+    
+    issues = []
+    detailed_feedback = []
+    
+    for part_name, (indices, display_name) in body_parts.items():
+        part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
+        
+        if part_diff > 0.01:
+            issues.append(display_name)
+            
+            # Get detailed directional feedback for this body part
+            directions = get_directional_feedback(
+                part_name, 
+                indices, 
+                input_pose, 
+                ref_pose,
+                shoulder_width_input,
+                shoulder_width_ref
+            )
+            
+            if directions:
+                detailed_feedback.extend(directions)
+    
+    # Limit to top 2 most important issues
+    detailed_feedback = detailed_feedback[:2]
+    
+    if best_score > VERY_GOOD:
+        result = {
+            "correct": True,
+            "status": "Perfect form",
+            "feedback": "Perfect form! Keep it up!",
+            "score": best_score,
+        }
+    elif issues:
+        # Generate feedback with specific directions
+        if detailed_feedback:
+            feedback_text = " | ".join(detailed_feedback)
+        else:
+            feedback_text = f"Adjust your {' and '.join(issues[:2])}"
+        
+        if best_score > GOOD:
+            correct = False
+            status = "Good form"
+            feedback = f"Almost there! {feedback_text}"
+        elif best_score > POOR:
+            correct = False
+            status = "Bad form"
+            feedback = f"Need work: {feedback_text}"
+        else:
+            correct = False
+            status = "Poor form"
+            feedback = f"Focus: {feedback_text}"
+        
+        result = {
+            "correct": correct,
+            "status": status,
+            "feedback": feedback,
+            "score": best_score,
+            "suggestions": detailed_feedback  # Separate field for detailed tips
+        }
+    else:
+        result = {
+            "correct": False,
+            "status": "Incorrect",
+            "feedback": "Wrong form, try again!",
+            "score": best_score,
+        }
+
+    return result
+
+
+def get_directional_feedback(part_name, indices, input_pose, ref_pose, shoulder_width_input, shoulder_width_ref):
+
+    feedback = []
+    
+    # Landmark mapping
+    landmarks = {
+        11: "left_shoulder", 12: "right_shoulder",
+        13: "left_elbow", 14: "right_elbow",
+        15: "left_wrist", 16: "right_wrist",
+        23: "left_hip", 24: "right_hip",
+        25: "left_knee", 26: "right_knee",
+        27: "left_ankle", 28: "right_ankle"
+    }
+    
+    if part_name == 'arms':
+        # Check arm width (wrists)
+        left_wrist_input = input_pose[15]
+        right_wrist_input = input_pose[16]
+        left_wrist_ref = ref_pose[15]
+        right_wrist_ref = ref_pose[16]
+        
+        arm_width_input = np.linalg.norm(left_wrist_input - right_wrist_input)
+        arm_width_ref = np.linalg.norm(left_wrist_ref - right_wrist_ref)
+        
+        # Normalize by shoulder width
+        relative_arm_width_input = arm_width_input / (shoulder_width_input or 1.0)
+        relative_arm_width_ref = arm_width_ref / (shoulder_width_ref or 1.0)
+        
+        width_diff = relative_arm_width_input - relative_arm_width_ref
+        
+        if abs(width_diff) > 0.15:  # Threshold: 15% difference
+            if width_diff > 0:
+                feedback.append("Hands too wide, bring them closer together")
+            else:
+                feedback.append("Hands too narrow, spread them wider")
+        
+        # Check arm height (vertical position)
+        avg_wrist_y_input = (left_wrist_input[1] + right_wrist_input[1]) / 2
+        avg_wrist_y_ref = (left_wrist_ref[1] + right_wrist_ref[1]) / 2
+        height_diff = avg_wrist_y_input - avg_wrist_y_ref
+        
+        if abs(height_diff) > 0.1:
+            if height_diff > 0:
+                feedback.append("Lower your hands")
+            else:
+                feedback.append("Raise your hands higher")
+    
+    elif part_name == 'legs':
+        # Check leg stance width (ankles)
+        left_ankle_input = input_pose[27]
+        right_ankle_input = input_pose[28]
+        left_ankle_ref = ref_pose[27]
+        right_ankle_ref = ref_pose[28]
+        
+        leg_width_input = np.linalg.norm(left_ankle_input - right_ankle_input)
+        leg_width_ref = np.linalg.norm(left_ankle_ref - right_ankle_ref)
+        
+        relative_leg_width_input = leg_width_input / (shoulder_width_input or 1.0)
+        relative_leg_width_ref = leg_width_ref / (shoulder_width_ref or 1.0)
+        
+        width_diff = relative_leg_width_input - relative_leg_width_ref
+        
+        if abs(width_diff) > 0.2:
+            if width_diff > 0:
+                feedback.append("Feet too wide, bring them closer")
+            else:
+                feedback.append("Feet too narrow, widen your stance")
+        
+        # Check knee bend (average knee height)
+        avg_knee_y_input = (input_pose[25][1] + input_pose[26][1]) / 2
+        avg_knee_y_ref = (ref_pose[25][1] + ref_pose[26][1]) / 2
+        bend_diff = avg_knee_y_input - avg_knee_y_ref
+        
+        if abs(bend_diff) > 0.1:
+            if bend_diff > 0:
+                feedback.append("Bend your knees more")
+            else:
+                feedback.append("Straighten your legs a bit")
+    
+    elif part_name == 'torso':
+        # Check torso angle/alignment
+        left_shoulder = input_pose[11]
+        right_shoulder = input_pose[12]
+        left_hip = input_pose[23]
+        right_hip = input_pose[24]
+        
+        # Check if torso is tilted forward/backward
+        shoulder_center_input = (left_shoulder + right_shoulder) / 2
+        hip_center_input = (left_hip + right_hip) / 2
+        
+        shoulder_center_ref = (ref_pose[11] + ref_pose[12]) / 2
+        hip_center_ref = (ref_pose[23] + ref_pose[24]) / 2
+        
+        # Z-axis (depth) difference
+        torso_lean_input = shoulder_center_input[2] - hip_center_input[2]
+        torso_lean_ref = shoulder_center_ref[2] - hip_center_ref[2]
+        lean_diff = torso_lean_input - torso_lean_ref
+        
+        if abs(lean_diff) > 0.1:
+            if lean_diff > 0:
+                feedback.append("Lean forward slightly")
+            else:
+                feedback.append("Keep your torso more upright")
+    
+    elif part_name == 'shoulders':
+        # Check if shoulders are level
+        left_shoulder = input_pose[11]
+        right_shoulder = input_pose[12]
+        
+        shoulder_tilt_input = left_shoulder[1] - right_shoulder[1]
+        shoulder_tilt_ref = ref_pose[11][1] - ref_pose[12][1]
+        tilt_diff = abs(shoulder_tilt_input) - abs(shoulder_tilt_ref)
+        
+        if abs(tilt_diff) > 0.05:
+            if shoulder_tilt_input > 0:
+                feedback.append("Level your shoulders (left side higher)")
+            elif shoulder_tilt_input < 0:
+                feedback.append("Level your shoulders (right side higher)")
+    
+    elif part_name == 'hips':
+        # Check hip alignment
+        left_hip = input_pose[23]
+        right_hip = input_pose[24]
+        
+        hip_tilt_input = left_hip[1] - right_hip[1]
+        hip_tilt_ref = ref_pose[23][1] - ref_pose[24][1]
+        tilt_diff = abs(hip_tilt_input) - abs(hip_tilt_ref)
+        
+        if abs(tilt_diff) > 0.05:
+            feedback.append("Keep your hips level")
+    
+    return feedback
