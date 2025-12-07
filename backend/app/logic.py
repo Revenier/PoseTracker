@@ -239,8 +239,6 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
                 indices, 
                 input_pose, 
                 ref_pose,
-                shoulder_width_input,
-                shoulder_width_ref
             )
             
             if directions:
@@ -264,17 +262,17 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             feedback_text = f"Adjust your {' and '.join(issues[:2])}"
         
         if best_score > GOOD:
-            correct = False
+            correct = True
             status = "Good form"
-            feedback = f"Almost there! {feedback_text}"
+            feedback = f"{feedback_text}"
         elif best_score > POOR:
             correct = False
             status = "Bad form"
-            feedback = f"Need work: {feedback_text}"
+            feedback = f"{feedback_text}"
         else:
             correct = False
             status = "Poor form"
-            feedback = f"Focus: {feedback_text}"
+            feedback = f"{feedback_text}"
         
         result = {
             "correct": correct,
@@ -294,151 +292,264 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     return result
 
 
-def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, shoulder_width_input, shoulder_width_ref):
+# def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, shoulder_width_input, shoulder_width_ref):
 
-    feedback = []
+#     feedback = []
     
-    # Landmark mapping
-    landmarks = {
-        11: "left_shoulder", 12: "right_shoulder",
-        13: "left_elbow", 14: "right_elbow",
-        15: "left_wrist", 16: "right_wrist",
-        23: "left_hip", 24: "right_hip",
-        25: "left_knee", 26: "right_knee",
-        27: "left_ankle", 28: "right_ankle"
+#     # Landmark mapping
+#     landmarks = {
+#         11: "left_shoulder", 12: "right_shoulder",
+#         13: "left_elbow", 14: "right_elbow",
+#         15: "left_wrist", 16: "right_wrist",
+#         23: "left_hip", 24: "right_hip",
+#         25: "left_knee", 26: "right_knee",
+#         27: "left_ankle", 28: "right_ankle"
+#     }
+    
+#     if posture != 'squat':
+#         if part_name == 'arms':
+#             # Check arm width (wrists)
+#             left_wrist_input = input_pose[15]
+#             right_wrist_input = input_pose[16]
+#             left_wrist_ref = ref_pose[15]
+#             right_wrist_ref = ref_pose[16]
+            
+#             arm_width_input = np.linalg.norm(left_wrist_input - right_wrist_input)
+#             arm_width_ref = np.linalg.norm(left_wrist_ref - right_wrist_ref)
+            
+#             # Normalize by shoulder width
+#             relative_arm_width_input = arm_width_input / (shoulder_width_input or 1.0)
+#             relative_arm_width_ref = arm_width_ref / (shoulder_width_ref or 1.0)
+            
+#             width_diff = relative_arm_width_input - relative_arm_width_ref
+#             print(f"arm width diff: {width_diff}")
+            
+#             if(posture == 'jumping_jack'):
+#                 if abs(width_diff) > 0.3: # Threshold: 25% difference
+#                     if width_diff > 0:
+#                         feedback.append("Hands too wide, bring them closer together")
+#                     else:
+#                         feedback.append("Hands too narrow, spread them wider")
+#             else:
+#                 if abs(width_diff) > 0.15:  # Threshold: 15% difference
+#                     if width_diff > 0:
+#                         feedback.append("Hands too wide, bring them closer together")
+#                     else:
+#                         feedback.append("Hands too narrow, spread them wider")
+
+#             # Check arm height (vertical position)
+#             avg_wrist_y_input = (left_wrist_input[1] + right_wrist_input[1]) / 2
+#             avg_wrist_y_ref = (left_wrist_ref[1] + right_wrist_ref[1]) / 2
+#             height_diff = avg_wrist_y_input - avg_wrist_y_ref
+            
+#             if abs(height_diff) > 0.1:
+#                 if height_diff > 0:
+#                     feedback.append("Lower your hands")
+#                 else:
+#                     feedback.append("Raise your hands higher")
+    
+#     elif part_name == 'legs':
+#         # Check leg stance width (ankles)
+#         left_ankle_input = input_pose[27]
+#         right_ankle_input = input_pose[28]
+#         left_ankle_ref = ref_pose[27]
+#         right_ankle_ref = ref_pose[28]
+        
+#         leg_width_input = np.linalg.norm(left_ankle_input - right_ankle_input)
+#         leg_width_ref = np.linalg.norm(left_ankle_ref - right_ankle_ref)
+        
+#         relative_leg_width_input = leg_width_input / (shoulder_width_input or 1.0)
+#         relative_leg_width_ref = leg_width_ref / (shoulder_width_ref or 1.0)
+        
+#         width_diff = relative_leg_width_input - relative_leg_width_ref
+        
+#         if(posture == 'jumping_jack'):
+#             if abs(width_diff) > 0.3:
+#                 if width_diff > 0:
+#                     feedback.append("Legs too wide, bring them closer")
+#                 else:
+#                     feedback.append("Legs too narrow, widen your stance")
+#         else:
+#             if abs(width_diff) > 0.2:
+#                 if width_diff > 0:
+#                     feedback.append("Feet too wide, bring them closer")
+#                 else:
+#                     feedback.append("Feet too narrow, widen your stance")
+        
+#         # Check knee bend (average knee height)
+#         avg_knee_y_input = (input_pose[25][1] + input_pose[26][1]) / 2
+#         avg_knee_y_ref = (ref_pose[25][1] + ref_pose[26][1]) / 2
+#         bend_diff = avg_knee_y_input - avg_knee_y_ref
+        
+#         if abs(bend_diff) > 0.1:
+#             if bend_diff > 0:
+#                 feedback.append("Bend your knees more")
+#             else:
+#                 feedback.append("Straighten your legs a bit")
+    
+#     elif part_name == 'torso':
+#         # Check torso angle/alignment
+#         left_shoulder = input_pose[11]
+#         right_shoulder = input_pose[12]
+#         left_hip = input_pose[23]
+#         right_hip = input_pose[24]
+        
+#         # Check if torso is tilted forward/backward
+#         shoulder_center_input = (left_shoulder + right_shoulder) / 2
+#         hip_center_input = (left_hip + right_hip) / 2
+        
+#         shoulder_center_ref = (ref_pose[11] + ref_pose[12]) / 2
+#         hip_center_ref = (ref_pose[23] + ref_pose[24]) / 2
+        
+#         # Z-axis (depth) difference
+#         torso_lean_input = shoulder_center_input[2] - hip_center_input[2]
+#         torso_lean_ref = shoulder_center_ref[2] - hip_center_ref[2]
+#         lean_diff = torso_lean_input - torso_lean_ref
+        
+#         if abs(lean_diff) > 0.1:
+#             if lean_diff > 0:
+#                 feedback.append("Lean forward slightly")
+#             else:
+#                 feedback.append("Keep your torso more upright")
+    
+#     elif part_name == 'shoulders':
+#         # Check if shoulders are level
+#         left_shoulder = input_pose[11]
+#         right_shoulder = input_pose[12]
+        
+#         shoulder_tilt_input = left_shoulder[1] - right_shoulder[1]
+#         shoulder_tilt_ref = ref_pose[11][1] - ref_pose[12][1]
+#         tilt_diff = abs(shoulder_tilt_input) - abs(shoulder_tilt_ref)
+        
+#         if abs(tilt_diff) > 0.05:
+#             if shoulder_tilt_input > 0:
+#                 feedback.append("Level your shoulders (left side higher)")
+#             elif shoulder_tilt_input < 0:
+#                 feedback.append("Level your shoulders (right side higher)")
+    
+#     elif part_name == 'hips':
+#         # Check hip alignment
+#         left_hip = input_pose[23]
+#         right_hip = input_pose[24]
+        
+#         hip_tilt_input = left_hip[1] - right_hip[1]
+#         hip_tilt_ref = ref_pose[23][1] - ref_pose[24][1]
+#         tilt_diff = abs(hip_tilt_input) - abs(hip_tilt_ref)
+        
+#         if abs(tilt_diff) > 0.05:
+#             feedback.append("Keep your hips level")
+    
+#     return feedback
+
+def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
+   
+    feedback = []
+
+    # Posture-specific priorities and thresholds
+    posture_config = {
+        'push_up': {
+            'priority_parts': ['arms', 'torso', 'shoulders'],
+            'tips': {
+                'arms': "Keep arms straight and shoulder-width apart",
+                'torso': "Keep body in straight line, no sagging hips",
+                'shoulders': "Shoulders should be over wrists"
+            }
+        },
+        'squat': {
+            'priority_parts': ['legs', 'torso', 'hips'],
+            'tips': {
+                'legs': "Keep knees aligned with toes, chest up",
+                'torso': "Keep back straight, chest forward",
+                'hips': "Lower hips down, knees shouldn't go past toes"
+            }
+        },
+        'situp': {
+            'priority_parts': ['torso', 'arms', 'shoulders'],
+            'tips': {
+                'torso': "Keep back straight, engage core",
+                'arms': "Arms should be across chest or behind head",
+                'shoulders': "Shoulders back, avoid hunching"
+            }
+        },
+        'jumping_jack': {
+            'priority_parts': ['arms', 'legs', 'shoulders'],
+            'tips': {
+                'arms': "Raise arms to shoulder height, synchronized movement",
+                'legs': "Jump with feet shoulder-width apart",
+                'shoulders': "Arms should reach ear level"
+            }
+        }
     }
     
-    if posture != 'squat':
-        if part_name == 'arms':
-            # Check arm width (wrists)
-            left_wrist_input = input_pose[15]
-            right_wrist_input = input_pose[16]
-            left_wrist_ref = ref_pose[15]
-            right_wrist_ref = ref_pose[16]
-            
-            arm_width_input = np.linalg.norm(left_wrist_input - right_wrist_input)
-            arm_width_ref = np.linalg.norm(left_wrist_ref - right_wrist_ref)
-            
-            # Normalize by shoulder width
-            relative_arm_width_input = arm_width_input / (shoulder_width_input or 1.0)
-            relative_arm_width_ref = arm_width_ref / (shoulder_width_ref or 1.0)
-            
-            width_diff = relative_arm_width_input - relative_arm_width_ref
-            print(f"arm width diff: {width_diff}")
-            
-            if(posture == 'jumping_jack'):
-                if abs(width_diff) > 0.3: # Threshold: 25% difference
-                    if width_diff > 0:
-                        feedback.append("Hands too wide, bring them closer together")
-                    else:
-                        feedback.append("Hands too narrow, spread them wider")
-            else:
-                if abs(width_diff) > 0.15:  # Threshold: 15% difference
-                    if width_diff > 0:
-                        feedback.append("Hands too wide, bring them closer together")
-                    else:
-                        feedback.append("Hands too narrow, spread them wider")
-
-            # Check arm height (vertical position)
-            avg_wrist_y_input = (left_wrist_input[1] + right_wrist_input[1]) / 2
-            avg_wrist_y_ref = (left_wrist_ref[1] + right_wrist_ref[1]) / 2
-            height_diff = avg_wrist_y_input - avg_wrist_y_ref
-            
-            if abs(height_diff) > 0.1:
-                if height_diff > 0:
-                    feedback.append("Lower your hands")
-                else:
-                    feedback.append("Raise your hands higher")
+    # Get config for current posture, default if not found
+    config = posture_config.get(posture, {
+        'priority_parts': ['torso', 'arms', 'legs'],
+        'tips': {
+            'arms': "Adjust arm position",
+            'legs': "Adjust leg position",
+            'torso': "Keep torso aligned"
+        }
+    })
     
+    # Only provide feedback if this part is a priority for this posture
+    if part_name not in config['priority_parts']:
+        return feedback
+    
+    # Get posture-specific tip
+    tip = config['tips'].get(part_name, f"Adjust {part_name}")
+    
+    # Calculate direction-specific corrections
+    if part_name == 'arms':
+        mean_input = np.mean(input_pose[indices], axis=0)
+        mean_ref = np.mean(ref_pose[indices], axis=0)
+        diff = mean_input - mean_ref
+        
+        if abs(diff[0]) > 0.05:
+            feedback.append(f"{tip}. Move {'right' if diff[0] > 0 else 'left'}")
+        if abs(diff[1]) > 0.05:
+            feedback.append(f"{tip}. Move {'down' if diff[1] > 0 else 'up'}")
+            
     elif part_name == 'legs':
-        # Check leg stance width (ankles)
-        left_ankle_input = input_pose[27]
-        right_ankle_input = input_pose[28]
-        left_ankle_ref = ref_pose[27]
-        right_ankle_ref = ref_pose[28]
+        mean_input = np.mean(input_pose[indices], axis=0)
+        mean_ref = np.mean(ref_pose[indices], axis=0)
+        diff = mean_input - mean_ref
         
-        leg_width_input = np.linalg.norm(left_ankle_input - right_ankle_input)
-        leg_width_ref = np.linalg.norm(left_ankle_ref - right_ankle_ref)
-        
-        relative_leg_width_input = leg_width_input / (shoulder_width_input or 1.0)
-        relative_leg_width_ref = leg_width_ref / (shoulder_width_ref or 1.0)
-        
-        width_diff = relative_leg_width_input - relative_leg_width_ref
-        
-        if(posture == 'jumping_jack'):
-            if abs(width_diff) > 0.3:
-                if width_diff > 0:
-                    feedback.append("Legs too wide, bring them closer")
-                else:
-                    feedback.append("Legs too narrow, widen your stance")
-        else:
-            if abs(width_diff) > 0.2:
-                if width_diff > 0:
-                    feedback.append("Feet too wide, bring them closer")
-                else:
-                    feedback.append("Feet too narrow, widen your stance")
-        
-        # Check knee bend (average knee height)
-        avg_knee_y_input = (input_pose[25][1] + input_pose[26][1]) / 2
-        avg_knee_y_ref = (ref_pose[25][1] + ref_pose[26][1]) / 2
-        bend_diff = avg_knee_y_input - avg_knee_y_ref
-        
-        if abs(bend_diff) > 0.1:
-            if bend_diff > 0:
-                feedback.append("Bend your knees more")
-            else:
-                feedback.append("Straighten your legs a bit")
-    
+        if abs(diff[0]) > 0.05:
+            feedback.append(f"{tip}. Position {'inward' if diff[0] > 0 else 'outward'}")
+        if abs(diff[1]) > 0.05:
+            feedback.append(f"{tip}. {'Lower' if diff[1] > 0 else 'Raise'} legs")
+            
     elif part_name == 'torso':
-        # Check torso angle/alignment
-        left_shoulder = input_pose[11]
-        right_shoulder = input_pose[12]
-        left_hip = input_pose[23]
-        right_hip = input_pose[24]
+        shoulder_diff = abs(input_pose[11][0] - input_pose[12][0]) - abs(ref_pose[11][0] - ref_pose[12][0])
+        if abs(shoulder_diff) > 0.05:
+            feedback.append(f"{tip}. Align shoulders level")
         
-        # Check if torso is tilted forward/backward
-        shoulder_center_input = (left_shoulder + right_shoulder) / 2
-        hip_center_input = (left_hip + right_hip) / 2
-        
-        shoulder_center_ref = (ref_pose[11] + ref_pose[12]) / 2
-        hip_center_ref = (ref_pose[23] + ref_pose[24]) / 2
-        
-        # Z-axis (depth) difference
-        torso_lean_input = shoulder_center_input[2] - hip_center_input[2]
-        torso_lean_ref = shoulder_center_ref[2] - hip_center_ref[2]
-        lean_diff = torso_lean_input - torso_lean_ref
-        
-        if abs(lean_diff) > 0.1:
-            if lean_diff > 0:
-                feedback.append("Lean forward slightly")
-            else:
-                feedback.append("Keep your torso more upright")
-    
+        # Check torso alignment
+        mean_y_input = (input_pose[11][1] + input_pose[12][1]) / 2
+        mean_y_ref = (ref_pose[11][1] + ref_pose[12][1]) / 2
+        if abs(mean_y_input - mean_y_ref) > 0.05:
+            feedback.append(f"{tip}. {'Straighten' if mean_y_input > mean_y_ref else 'Bend'} back")
+            
     elif part_name == 'shoulders':
-        # Check if shoulders are level
-        left_shoulder = input_pose[11]
-        right_shoulder = input_pose[12]
+        left_input = input_pose[11]
+        right_input = input_pose[12]
+        left_ref = ref_pose[11]
+        right_ref = ref_pose[12]
         
-        shoulder_tilt_input = left_shoulder[1] - right_shoulder[1]
-        shoulder_tilt_ref = ref_pose[11][1] - ref_pose[12][1]
-        tilt_diff = abs(shoulder_tilt_input) - abs(shoulder_tilt_ref)
+        left_diff = np.linalg.norm(left_input - left_ref)
+        right_diff = np.linalg.norm(right_input - right_ref)
         
-        if abs(tilt_diff) > 0.05:
-            if shoulder_tilt_input > 0:
-                feedback.append("Level your shoulders (left side higher)")
-            elif shoulder_tilt_input < 0:
-                feedback.append("Level your shoulders (right side higher)")
-    
+        if left_diff > 0.05:
+            feedback.append(f"{tip}. Adjust left shoulder")
+        if right_diff > 0.05:
+            feedback.append(f"{tip}. Adjust right shoulder")
+            
     elif part_name == 'hips':
-        # Check hip alignment
-        left_hip = input_pose[23]
-        right_hip = input_pose[24]
+        mean_input = np.mean(input_pose[indices], axis=0)
+        mean_ref = np.mean(ref_pose[indices], axis=0)
+        diff = mean_input - mean_ref
         
-        hip_tilt_input = left_hip[1] - right_hip[1]
-        hip_tilt_ref = ref_pose[23][1] - ref_pose[24][1]
-        tilt_diff = abs(hip_tilt_input) - abs(hip_tilt_ref)
-        
-        if abs(tilt_diff) > 0.05:
-            feedback.append("Keep your hips level")
+        if abs(diff[1]) > 0.05:
+            feedback.append(f"{tip}. {'Lower' if diff[1] > 0 else 'Raise'} hips")
     
-    return feedback
+    return feedback[:2] 

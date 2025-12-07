@@ -89,6 +89,7 @@ def receive_pose():
             array = align_landmarks(np.array(arr).reshape((33, 3)))
             # angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
             landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
+            print(f"Frame {idx} processed: {landmark_result}", flush=True)
 
             results.append({
                 "index": idx,
@@ -125,7 +126,7 @@ def receive_pose():
     #     "posture": posture,
     # }
 
-    if(correct_count > (total-correct_count)):
+    if(correct_count*100/total) >= 80:
         status = True
     else:
         status = False
@@ -133,8 +134,8 @@ def receive_pose():
     return ({
         "status": status,
         # "summary": summary,
-        "fullFeedback": formatted_feedback(results),
-        "formattedFeedback": group_landmark_feedback(results),
+        "formattedFeedback": formatted_feedback(results),
+        "fullFeedback": group_landmark_feedback(results),
     }), 200
 
 

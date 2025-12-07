@@ -27,58 +27,85 @@ def formatted_feedback(results):
     if not isinstance(results, list) or len(results) == 0:
         return "No feedback available"
     
-    # Count correct vs incorrect
-    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
     total = len(results)
-    
-    # Collect all feedback from incorrect poses
-    all_feedback = []
-    for result in results:
-        if isinstance(result, dict) and 'landmarks' in result:
-            landmark_data = result['landmarks']
-            if not landmark_data.get('correct', False):
-                feedback = landmark_data.get('status')
-                if feedback:
-                    all_feedback.append(feedback)
-    
-    # Format summary message
+    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
+
+    statuses = []
+    for r in results:
+        lm = r.get('landmarks', {}) if isinstance(r, dict) else {}
+        st = lm.get('status') or lm.get('feedback')
+        if st:
+            statuses.append(str(st))
+
+    # choose the most common status/feedback
+    top = Counter(statuses).most_common(1)
+    top_feedback = top[0][0] if top else ""
+
     if correct_count == total:
         return "Perfect form"
-    elif len(all_feedback) > 0:
-        # Take most frequent feedback or first one
-        return f"{all_feedback[0]}"
     else:
-        return f"wrong posture."
+        return f"{top_feedback}"
+        
+
+# def group_landmark_feedback(results):
+#     if not isinstance(results, list) or len(results) == 0:
+#         return "No feedback available"
+    
+#     # Count correct vs incorrect
+#     correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
+#     total = len(results)
+    
+#     # Collect all feedback from incorrect poses
+#     all_feedback = []
+#     for result in results:
+#         if isinstance(result, dict) and 'landmarks' in result:
+#             landmark_data = result['landmarks']
+#             # if not landmark_data.get('correct', False):
+#             feedback = landmark_data.get('feedback')
+#             if feedback:
+#                 all_feedback.append(feedback)
+    
+#     # Format summary message
+#     if correct_count == total:
+#         return "Perfect form throughout! Keep it up!"
+#     elif correct_count*100/len(all_feedback) >= 80:
+#         return "Good form overall, ."
+#     elif correct_count*100/len(all_feedback) <= 80:
+#         # Take most frequent feedback or first one
+#         return f"{all_feedback}"
+#     else:
+#         return f"wrong posture."
         
 
 def group_landmark_feedback(results):
     if not isinstance(results, list) or len(results) == 0:
         return "No feedback available"
-    
-    # Count correct vs incorrect
-    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
+
     total = len(results)
-    
-    # Collect all feedback from incorrect poses
-    all_feedback = []
-    for result in results:
-        if isinstance(result, dict) and 'landmarks' in result:
-            landmark_data = result['landmarks']
-            if not landmark_data.get('correct', False):
-                feedback = landmark_data.get('feedback')
-                if feedback:
-                    all_feedback.append(feedback)
-    
-    # Format summary message
+    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
+
+    feedbacks = []
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        lm = r.get('landmarks', {})
+        fb = lm.get('feedback') or lm.get('status')
+        if fb and not lm.get('correct', False):
+            feedbacks.append(str(fb))
+
+    top = Counter(feedbacks).most_common(1)
+    top_feedback = top[0][0] if top else ""
+
     if correct_count == total:
         return "Perfect form throughout! Keep it up!"
-    elif len(all_feedback) > 0:
-        # Take most frequent feedback or first one
-        return f"{all_feedback[0]}"
+    pct = (correct_count * 100) / total
+    if pct >= 80:
+        return f"Good form overall. {top_feedback}"
+    elif pct > 0:
+        return f"Mixed results. {top_feedback}"
     else:
-        return f"wrong posture."
-        
-
+        return f"Needs improvement. {top_feedback}"
+    
 def group_angle_feedback(feedback_list):
     # Collect all wrong angle indices from the batch
     all_wrong_indices = []
