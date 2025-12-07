@@ -234,6 +234,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             
             # Get detailed directional feedback for this body part
             directions = get_directional_feedback(
+                posture,
                 part_name, 
                 indices, 
                 input_pose, 
@@ -293,7 +294,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     return result
 
 
-def get_directional_feedback(part_name, indices, input_pose, ref_pose, shoulder_width_input, shoulder_width_ref):
+def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, shoulder_width_input, shoulder_width_ref):
 
     feedback = []
     
@@ -307,38 +308,47 @@ def get_directional_feedback(part_name, indices, input_pose, ref_pose, shoulder_
         27: "left_ankle", 28: "right_ankle"
     }
     
-    if part_name == 'arms':
-        # Check arm width (wrists)
-        left_wrist_input = input_pose[15]
-        right_wrist_input = input_pose[16]
-        left_wrist_ref = ref_pose[15]
-        right_wrist_ref = ref_pose[16]
-        
-        arm_width_input = np.linalg.norm(left_wrist_input - right_wrist_input)
-        arm_width_ref = np.linalg.norm(left_wrist_ref - right_wrist_ref)
-        
-        # Normalize by shoulder width
-        relative_arm_width_input = arm_width_input / (shoulder_width_input or 1.0)
-        relative_arm_width_ref = arm_width_ref / (shoulder_width_ref or 1.0)
-        
-        width_diff = relative_arm_width_input - relative_arm_width_ref
-        
-        if abs(width_diff) > 0.15:  # Threshold: 15% difference
-            if width_diff > 0:
-                feedback.append("Hands too wide, bring them closer together")
+    if posture != 'squat':
+        if part_name == 'arms':
+            # Check arm width (wrists)
+            left_wrist_input = input_pose[15]
+            right_wrist_input = input_pose[16]
+            left_wrist_ref = ref_pose[15]
+            right_wrist_ref = ref_pose[16]
+            
+            arm_width_input = np.linalg.norm(left_wrist_input - right_wrist_input)
+            arm_width_ref = np.linalg.norm(left_wrist_ref - right_wrist_ref)
+            
+            # Normalize by shoulder width
+            relative_arm_width_input = arm_width_input / (shoulder_width_input or 1.0)
+            relative_arm_width_ref = arm_width_ref / (shoulder_width_ref or 1.0)
+            
+            width_diff = relative_arm_width_input - relative_arm_width_ref
+            print(f"arm width diff: {width_diff}")
+            
+            if(posture == 'jumping_jack'):
+                if abs(width_diff) > 0.3: # Threshold: 25% difference
+                    if width_diff > 0:
+                        feedback.append("Hands too wide, bring them closer together")
+                    else:
+                        feedback.append("Hands too narrow, spread them wider")
             else:
-                feedback.append("Hands too narrow, spread them wider")
-        
-        # Check arm height (vertical position)
-        avg_wrist_y_input = (left_wrist_input[1] + right_wrist_input[1]) / 2
-        avg_wrist_y_ref = (left_wrist_ref[1] + right_wrist_ref[1]) / 2
-        height_diff = avg_wrist_y_input - avg_wrist_y_ref
-        
-        if abs(height_diff) > 0.1:
-            if height_diff > 0:
-                feedback.append("Lower your hands")
-            else:
-                feedback.append("Raise your hands higher")
+                if abs(width_diff) > 0.15:  # Threshold: 15% difference
+                    if width_diff > 0:
+                        feedback.append("Hands too wide, bring them closer together")
+                    else:
+                        feedback.append("Hands too narrow, spread them wider")
+
+            # Check arm height (vertical position)
+            avg_wrist_y_input = (left_wrist_input[1] + right_wrist_input[1]) / 2
+            avg_wrist_y_ref = (left_wrist_ref[1] + right_wrist_ref[1]) / 2
+            height_diff = avg_wrist_y_input - avg_wrist_y_ref
+            
+            if abs(height_diff) > 0.1:
+                if height_diff > 0:
+                    feedback.append("Lower your hands")
+                else:
+                    feedback.append("Raise your hands higher")
     
     elif part_name == 'legs':
         # Check leg stance width (ankles)
@@ -355,11 +365,18 @@ def get_directional_feedback(part_name, indices, input_pose, ref_pose, shoulder_
         
         width_diff = relative_leg_width_input - relative_leg_width_ref
         
-        if abs(width_diff) > 0.2:
-            if width_diff > 0:
-                feedback.append("Feet too wide, bring them closer")
-            else:
-                feedback.append("Feet too narrow, widen your stance")
+        if(posture == 'jumping_jack'):
+            if abs(width_diff) > 0.3:
+                if width_diff > 0:
+                    feedback.append("Legs too wide, bring them closer")
+                else:
+                    feedback.append("Legs too narrow, widen your stance")
+        else:
+            if abs(width_diff) > 0.2:
+                if width_diff > 0:
+                    feedback.append("Feet too wide, bring them closer")
+                else:
+                    feedback.append("Feet too narrow, widen your stance")
         
         # Check knee bend (average knee height)
         avg_knee_y_input = (input_pose[25][1] + input_pose[26][1]) / 2
