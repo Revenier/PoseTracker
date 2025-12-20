@@ -23,33 +23,6 @@ ANGLE_NAME_MAP = {
     (15, 13, 11): "left_wrist_angle",
 }
 
-def formatted_feedback(results):
-    if not isinstance(results, list) or len(results) == 0:
-        return "No feedback available"
-    
-    total = len(results)
-    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
-    false_count = total - correct_count 
-    statuses = []
-    for r in results:
-        lm = r.get('landmarks', {}) if isinstance(r, dict) else {}
-        st = lm.get('status') or lm.get('feedback')
-        if st:
-            statuses.append(str(st))
-
-    # choose the most common status/feedback
-    # TODO: fix this. 
-    top = Counter(statuses).most_common(1)
-    top_feedback = top[0][0] if top else ""
-
-    if correct_count == total:
-        return "Perfect form"
-
-    else:
-        return f"{top_feedback}"
-
-
-
 def group_landmark_issue(results, score):
     if not isinstance(results, list) or len(results) == 0:
         return "No feedback available"
@@ -98,33 +71,5 @@ def group_landmark_feedback(results):
 
     if correct_count == total:
         return "No Feedback!"
-    # pct = (correct_count * 100) / total
-    # if pct >= 80:
-    #     return f"{top_feedback}"
-    # elif pct > 0:
-    #     return f"{top_feedback}"
     else:
         return f"{top_feedback}"
-    
-def group_angle_feedback(feedback_list):
-    # Collect all wrong angle indices from the batch
-    all_wrong_indices = []
-    for fb in feedback_list:
-        if isinstance(fb, dict) and 'wrong_indices' in fb:
-            all_wrong_indices.extend(fb['wrong_indices'])
-    if not all_wrong_indices:
-        return "All angles correct!"
-
-    angle_names = [ANGLE_NAME_MAP.get(tuple(idx), "unknown_angle") 
-                  for idx in all_wrong_indices]
-    
-    angle_counts = Counter(angle_names)
-    
-    most_common = angle_counts.most_common(2)
-
-    feedback_msgs = []
-    for angle_name, count in most_common:
-        readable_name = angle_name.replace('_', ' ').title()
-        feedback_msgs.append(f"Adjust your {readable_name} (wrong: {count}x)")
-    
-    return " | ".join(feedback_msgs)

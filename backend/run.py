@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
-from app.group import group_landmark_feedback, formatted_feedback, group_landmark_issue
-from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
+from app.group import group_landmark_feedback, group_landmark_issue
+from app.logic import landmark_logic, get_ref_from_redis, align_landmarks
 import threading
 
 REFERENCE_DATA = {}
@@ -14,10 +14,8 @@ def load_reference_data():
     for posture in postures:
         try:
             landmarks = get_ref_from_redis(posture, "landmarks")
-            # angles = get_ref_from_redis(posture, "angles")
             REFERENCE_DATA[posture] = {
                 "landmarks": landmarks,
-                # "angles": angles,
                 "loaded_at": np.datetime64('now')
             }
             print(f"Loaded reference data for {posture}")
@@ -71,8 +69,6 @@ def receive_pose():
         }), 400
 
     ref_landmarks_all = REFERENCE_DATA[posture]["landmarks"]
-    # ref_angles_all = REFERENCE_DATA[posture]["angles"]
-    
     
     results = []
     correct_count = 0
@@ -89,7 +85,6 @@ def receive_pose():
             
 
             array = align_landmarks(np.array(arr).reshape((33, 3)))
-            # angle_result = angle_logic(posture, array, ref_angles=ref_angles_all)
             landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
             print(f"Frame {idx} processed: {landmark_result}", flush=True)
 
@@ -119,14 +114,6 @@ def receive_pose():
                     "error_type": type(e).__name__
                 }
         })
-
-    # total = len(results)
-    # summary = {
-    #     "total_inputs": total,
-    #     "correct": correct_count,
-    #     "incorrect": total - correct_count,
-    #     "posture": posture,
-    # }
 
     score = correct_count*100/total
     if score >= 80:
