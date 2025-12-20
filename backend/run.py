@@ -76,6 +76,7 @@ def receive_pose():
     
     results = []
     correct_count = 0
+    total = 0
 
     # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
     for idx, arr in enumerate(mediapipe, start=1):
@@ -96,7 +97,7 @@ def receive_pose():
                 "index": idx,
                 "landmarks": landmark_result
             })
-            
+            total += 1
             if landmark_result.get('correct', False):
                 correct_count += 1
 
@@ -119,7 +120,7 @@ def receive_pose():
                 }
         })
 
-    total = len(results)
+    # total = len(results)
     # summary = {
     #     "total_inputs": total,
     #     "correct": correct_count,
@@ -133,6 +134,8 @@ def receive_pose():
         status = False
 
     return ({
+        'correctCount': correct_count,
+        'totalCount': correct_count*100/total,
         "status": status,
         # "summary": summary,
         "formattedFeedback": formatted_feedback(results),
