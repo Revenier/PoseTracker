@@ -45,37 +45,7 @@ def formatted_feedback(results):
         return "Perfect form"
     else:
         return f"{top_feedback}"
-        
-
-# def group_landmark_feedback(results):
-#     if not isinstance(results, list) or len(results) == 0:
-#         return "No feedback available"
-    
-#     # Count correct vs incorrect
-#     correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
-#     total = len(results)
-    
-#     # Collect all feedback from incorrect poses
-#     all_feedback = []
-#     for result in results:
-#         if isinstance(result, dict) and 'landmarks' in result:
-#             landmark_data = result['landmarks']
-#             # if not landmark_data.get('correct', False):
-#             feedback = landmark_data.get('feedback')
-#             if feedback:
-#                 all_feedback.append(feedback)
-    
-#     # Format summary message
-#     if correct_count == total:
-#         return "Perfect form throughout! Keep it up!"
-#     elif correct_count*100/len(all_feedback) >= 80:
-#         return "Good form overall, ."
-#     elif correct_count*100/len(all_feedback) <= 80:
-#         # Take most frequent feedback or first one
-#         return f"{all_feedback}"
-#     else:
-#         return f"wrong posture."
-        
+         
 
 def group_landmark_feedback(results):
     if not isinstance(results, list) or len(results) == 0:

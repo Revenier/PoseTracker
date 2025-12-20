@@ -15,7 +15,7 @@ from sklearn.preprocessing import normalize
 # Import align_landmarks from logic.py
 from app.logic import align_landmarks
 
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_DB   = int(os.getenv("REDIS_DB", "0"))
 
