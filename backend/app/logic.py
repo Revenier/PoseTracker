@@ -23,15 +23,6 @@ def get_ref_from_redis(posture, data_type):
 _REF_CACHE = {}
 USE_FAISS = False
 
-def calculate_angle(a, b, c):
-    ba = a - b
-    bc = c - b
-    if np.linalg.norm(ba) == 0 or np.linalg.norm(bc) == 0:
-        return 0.0  # or np.nan, or skip this angle
-    cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-    angle = np.arccos(np.clip(cosine_angle, -1.0, 1.0))
-    return np.degrees(angle)
-
 def align_landmarks(landmarks):
     # landmarks: (33, 3) array
     left_shoulder = landmarks[11][:2]
@@ -55,56 +46,6 @@ def align_landmarks(landmarks):
     aligned = np.hstack([xy_rot, landmarks[:, 2:3]])
     return aligned
 
-def angle_logic(posture, input_data, ref_angles=None):
-    angle_indices = [
-        (14, 12, 24),  # right_elbow, right_shoulder, right_hip
-        (13, 11, 23),  # left_elbow, left_shoulder, left_hip
-        (26, 24, 25),  # right_knee, right_hip, left_knee
-        (24, 26, 28),  # right_hip, right_knee, right_ankle
-        (23, 25, 27),  # left_hip, left_knee, left_ankle
-        (16, 14, 12),  # right_wrist, right_elbow, right_shoulder
-        (15, 13, 11),  # left_wrist, left_elbow, left_shoulder
-    ]
-
-    angle_names = [
-        "right elbow", "left elbow", "right knee", "right hip", "left hip", "right wrist", "left wrist"
-    ]
-
-    input_angles = []
-    for a, b, c in angle_indices:
-        input_angles.append(calculate_angle(input_data[a], input_data[b], input_data[c]))
-    input_angles = np.array(input_angles)
-
-    # Find the closest reference frame (smallest total angle difference)
-    diffs_all = np.abs(ref_angles - input_angles)
-    sum_diffs = np.sum(diffs_all, axis=1)
-    best_idx = np.argmin(sum_diffs)
-    best_ref = ref_angles[best_idx]
-    diffs = np.abs(input_angles - best_ref)
-    wrong_indices = np.where(diffs > 15)[0]  # threshold for "wrong"
-
-    if len(wrong_indices) >= 3:
-        result = {
-            "correct": False,
-            "status": "major_issues",
-            "feedback": f"You're not doing a {posture.replace('_', ' ')}. Please check your form.",
-        }
-    elif len(wrong_indices) > 0:
-        max_idx = wrong_indices[np.argmax(diffs[wrong_indices])]
-        suggestion = f"Try to adjust your {angle_names[max_idx]}: expected around {best_ref[max_idx]:.0f}°, got {input_angles[max_idx]:.0f}°."
-        result = {
-            "correct": False,
-            "status": "minor_issues",
-            "feedback": f"Incorrect posture, try again! {suggestion}",
-        }
-    else:
-        result = {
-            "correct": True,
-            "status": "correct",
-            "feedback": "Correct posture!",
-        }
-    
-    return result
 
 def body_part_index_priority(posture):
     posture_priorities = {
@@ -131,10 +72,7 @@ def body_part_index_priority(posture):
         'description': 'all landmarks'
     })
 
-# new logic landmark
-
 def landmark_logic(posture, input_landmarks, ref_landmarks=None):
-
     # ensure ref_norm precomputed and cached for posture
     if posture not in _REF_CACHE:
         ref_norm = normalize(ref_landmarks, axis=1)
@@ -207,7 +145,6 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             if directions:
                 detailed_feedback.extend(directions)
             
-    
     # Limit to top 2 most important issues
     detailed_feedback = detailed_feedback[:2]
     
