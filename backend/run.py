@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
-from app.group import group_landmark_feedback, formatted_feedback
+from app.group import group_landmark_feedback, formatted_feedback, group_landmark_issue
 from app.logic import landmark_logic, angle_logic, get_ref_from_redis, align_landmarks
 import threading
 
@@ -128,17 +128,16 @@ def receive_pose():
     #     "posture": posture,
     # }
 
-    if(correct_count*100/total) >= 80:
+    score = correct_count*100/total
+    if score >= 80:
         status = True
     else:
         status = False
 
     return ({
-        'correctCount': correct_count,
-        'totalCount': correct_count*100/total,
+        'score': score,
         "status": status,
-        # "summary": summary,
-        "formattedFeedback": formatted_feedback(results),
+        "formattedFeedback": group_landmark_issue(results, score),
         "fullFeedback": group_landmark_feedback(results),
     }), 200
 

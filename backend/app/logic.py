@@ -206,6 +206,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             
             if directions:
                 detailed_feedback.extend(directions)
+            
     
     # Limit to top 2 most important issues
     detailed_feedback = detailed_feedback[:2]
@@ -219,22 +220,20 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
         }
     elif issues:
         # Generate feedback with specific directions
-        if detailed_feedback:
-            feedback_text = " | ".join(detailed_feedback)
-        else:
-            feedback_text = f"Adjust your {' and '.join(issues[:2])}"
+        feedback_text = " | ".join(detailed_feedback)
+        issue_text = f"Adjust your {' and '.join(issues[:2])}"
         
         if best_score > GOOD:
             correct = True
-            status = "Good form"
+            status = f"{issue_text}"
             feedback = f"{feedback_text}"
         elif best_score > POOR:
             correct = False
-            status = "Bad form"
+            status = f"{issue_text}"
             feedback = f"{feedback_text}"
         else:
             correct = False
-            status = "Poor form"
+            status = f"{issue_text}"
             feedback = f"{feedback_text}"
         
         result = {

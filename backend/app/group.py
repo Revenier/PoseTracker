@@ -48,7 +48,34 @@ def formatted_feedback(results):
     else:
         return f"{top_feedback}"
 
-         
+
+
+def group_landmark_issue(results, score):
+    if not isinstance(results, list) or len(results) == 0:
+        return "No feedback available"
+
+    total = len(results)
+    correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
+
+    feedbacks = []
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        lm = r.get('landmarks', {})
+        fb = lm.get('status')
+        if fb and not lm.get('correct', False):
+            feedbacks.append(str(fb))
+
+    top = Counter(feedbacks).most_common(1)
+    top_feedback = top[0][0] if top else ""
+
+    if correct_count == total:
+        return "Perfect form!"
+    elif score >= 80:
+        return f"Good. {top_feedback}"
+    else:
+        return f"Bad. {top_feedback}"
+    
 
 def group_landmark_feedback(results):
     if not isinstance(results, list) or len(results) == 0:
@@ -70,14 +97,14 @@ def group_landmark_feedback(results):
     top_feedback = top[0][0] if top else ""
 
     if correct_count == total:
-        return "Perfect form throughout! Keep it up!"
-    pct = (correct_count * 100) / total
-    if pct >= 80:
-        return f"Good form overall. {top_feedback}"
-    elif pct > 0:
-        return f"Mixed results. {top_feedback}"
+        return "No Feedback!"
+    # pct = (correct_count * 100) / total
+    # if pct >= 80:
+    #     return f"{top_feedback}"
+    # elif pct > 0:
+    #     return f"{top_feedback}"
     else:
-        return f"Needs improvement. {top_feedback}"
+        return f"{top_feedback}"
     
 def group_angle_feedback(feedback_list):
     # Collect all wrong angle indices from the batch
