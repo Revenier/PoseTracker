@@ -26,7 +26,7 @@ REDIS_DB   = int(os.getenv("REDIS_DB", "0"))
 
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=False)
 
-def load_feature_matrix(posture: str, data_type: Literal["landmark", "angle"], *, dtype=float):
+def load_feature_matrix(posture: str, data_type: Literal["landmark"], *, dtype=float):
     pattern = f"{posture}:{data_type}:*"
     cursor = 0
     rows = []

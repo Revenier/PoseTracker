@@ -23,83 +23,6 @@ def get_ref_from_redis(posture, data_type):
 _REF_CACHE = {}
 USE_FAISS = False
 
-# def landmark_logic(posture, input_landmarks, ref_landmarks=None):
-
-#      # ensure ref_norm precomputed and cached for posture
-#     if posture not in _REF_CACHE:
-#         ref_norm = normalize(ref_landmarks, axis=1)
-#         _REF_CACHE[posture] = ref_norm
-#     else:
-#         ref_norm = _REF_CACHE[posture]
-
-#     # prepare query (flatten + normalize)
-#     q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
-#     q_norm = q / (np.linalg.norm(q) or 1.0)
-
-#     sims = ref_norm.dot(q_norm) 
-#     best_idx = int(np.argmax(sims))
-#     best_score = round(float(sims[best_idx]), 4)
-    
-#     VERY_GOOD = 0.99
-#     GOOD = 0.96
-#     POOR = 0.93
-
-#     input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
-#     ref_pose = ref_norm[best_idx].reshape(33, 3)
-
-#     body_parts = {
-#         'arms': ([11,13,15,12,14,16], "arm position"),
-#         'legs': ([23,25,27,24,26,28], "leg position"),
-#         'torso': ([11,12,23,24], "body alignment"),
-#         'shoulders': ([11,12], "shoulder level"),
-#         'hips': ([23,24], "hip position")
-#     }
-        
-#     issues = []
-    
-#     for part_name, (indices, name) in body_parts.items():
-#         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-#         if part_diff > 0.01: 
-#             issues.append(name)
-        
-#     if best_score > VERY_GOOD:
-#         result = {
-#             "correct": True,
-#             "status": "Perfect form",
-#             "feedback": "Perfect form! Keep it up!",
-#             "score": best_score,
-#         }
-
-#     elif issues:
-#         if best_score > GOOD:
-#             correct = False
-#             status = "Good form"
-#             feedback = f"Check your {' and '.join(issues[:2])}"
-#         elif best_score > POOR:
-#             correct = False
-#             status = "Bad form"
-#             feedback = f"Improve your {' and '.join(issues[:2])}"
-#         else:
-#             correct = False
-#             status = "Poor form"
-#             feedback = f"Focus on form: {' and '.join(issues[:2])}"
-        
-#         result = {
-#             "correct": correct,
-#             "status": status,
-#             "feedback": feedback,
-#             "score": best_score,
-#         }
-#     else:
-#         result = {
-#             "correct": False,
-#             "status": "Incorrect",
-#             "feedback": "Wrong form, try again!",
-#             "score": best_score,
-#         }
-
-#     return result
-
 def calculate_angle(a, b, c):
     ba = a - b
     bc = c - b
@@ -183,6 +106,30 @@ def angle_logic(posture, input_data, ref_angles=None):
     
     return result
 
+def body_part_index_priority(posture):
+    posture_priorities = {
+        'push_up': {
+            'indices': list(range(99)),  # whole body
+            'description': 'shoulders, elbows, wrists, hips, knees'
+        },
+        'situp': {
+            'indices': [0, 1, 2, 33, 34, 35, 36, 37, 38, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86],  # nose, shoulders, hips, knees, ankles
+            'description': 'nose, shoulders, hips, knees, ankles'
+        },
+        'squat': {
+            'indices': [0, 1, 2, 33, 34, 35, 36, 37, 38, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84],
+            'description': 'nose, shoulders, hips, knees, ankles'
+        },
+        'jumping_jack': {
+            'indices': list(range(99)), # whole body
+            'description': 'whole body'
+        }
+    }
+    
+    return posture_priorities.get(posture, {
+        'indices': list(range(99)),
+        'description': 'all landmarks'
+    })
 
 # new logic landmark
 
@@ -199,16 +146,32 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     q = np.asarray(input_landmarks.flatten(), dtype=np.float32)
     q_norm = q / (np.linalg.norm(q) or 1.0)
 
-    sims = ref_norm.dot(q_norm) 
-    best_idx = int(np.argmax(sims))
-    best_score = round(float(sims[best_idx]), 4)
+    sims_temp = ref_norm.dot(q_norm) 
+    best_idx_temp = int(np.argmax(sims_temp))
+    ref_pose_temp = ref_norm[best_idx_temp]
+
+    priority_config = body_part_index_priority(posture)
+    priority_indices = priority_config['indices']
+
+    # Normalize q_priority to unit vector
+    q_norm[priority_indices] = ref_pose_temp[priority_indices]
+    # Similarity using only priority points
+    sims = ref_pose_temp.dot(q_norm)
+    best_score = round(float(sims), 4)    
     
-    VERY_GOOD = 0.99
-    GOOD = 0.96
-    POOR = 0.93
+    thresholds = {
+        'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
+        'squat':        {'VERY_GOOD': 0.96, 'GOOD': 0.93,  'POOR': 0.90},
+        'situp':        {'VERY_GOOD': 0.98,  'GOOD': 0.95, 'POOR': 0.91},
+        'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
+    }
+    t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.93})
+    VERY_GOOD = t['VERY_GOOD']
+    GOOD = t['GOOD']
+    POOR = t['POOR']
 
     input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
-    ref_pose = ref_norm[best_idx].reshape(33, 3)
+    ref_pose = ref_pose_temp.reshape(33, 3)
 
     # Body part definitions
     body_parts = {

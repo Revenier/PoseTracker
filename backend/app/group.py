@@ -29,7 +29,7 @@ def formatted_feedback(results):
     
     total = len(results)
     correct_count = sum(1 for r in results if r.get('landmarks', {}).get('correct', False))
-
+    false_count = total - correct_count 
     statuses = []
     for r in results:
         lm = r.get('landmarks', {}) if isinstance(r, dict) else {}
@@ -38,13 +38,16 @@ def formatted_feedback(results):
             statuses.append(str(st))
 
     # choose the most common status/feedback
+    # TODO: fix this. 
     top = Counter(statuses).most_common(1)
     top_feedback = top[0][0] if top else ""
 
     if correct_count == total:
         return "Perfect form"
+
     else:
         return f"{top_feedback}"
+
          
 
 def group_landmark_feedback(results):

@@ -124,18 +124,18 @@ def main():
         total_found += lm_found
         total_rows += lm_total
 
-        an_path = data_dir / f"{posture}_angles_raw.csv"
-        if an_path.is_file():
-            angles = read_numeric_csv(an_path)
-            # Just normalize angles feature-wise
-            an_new, an_found, an_total = save_rows(r, posture, "angle", "angle_logic", angles)
-            print(f"🔎 Angles   : total_rows={an_total}, new={an_new}, found={an_found}")
+        # an_path = data_dir / f"{posture}_angles_raw.csv"
+        # if an_path.is_file():
+        #     angles = read_numeric_csv(an_path)
+        #     # Just normalize angles feature-wise
+        #     an_new, an_found, an_total = save_rows(r, posture, "angle", "angle_logic", angles)
+        #     print(f"🔎 Angles   : total_rows={an_total}, new={an_new}, found={an_found}")
 
-            total_new += an_new
-            total_found += an_found
-            total_rows += an_total
-        else:
-            print("ℹ️  Angles file tidak ditemukan — dilewati.")
+        #     total_new += an_new
+        #     total_found += an_found
+        #     total_rows += an_total
+        # else:
+        #     print("ℹ️  Angles file tidak ditemukan — dilewati.")
 
     print("\n✅ Selesai preload data normalized ke Redis.", flush=True)
     print(f"📊 TOTAL KESELURUHAN → total_rows={total_rows}, new={total_new}, found_duplicate={total_found}",flush=True)

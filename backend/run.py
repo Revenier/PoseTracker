@@ -14,10 +14,10 @@ def load_reference_data():
     for posture in postures:
         try:
             landmarks = get_ref_from_redis(posture, "landmarks")
-            angles = get_ref_from_redis(posture, "angles")
+            # angles = get_ref_from_redis(posture, "angles")
             REFERENCE_DATA[posture] = {
                 "landmarks": landmarks,
-                "angles": angles,
+                # "angles": angles,
                 "loaded_at": np.datetime64('now')
             }
             print(f"Loaded reference data for {posture}")
@@ -55,6 +55,7 @@ app = create_app()
 def receive_pose():
     data = request.get_json()
     posture = data.get('posture')
+    print(f"Received posture: {posture}")
     mediapipe = data.get('mediapipe', [])
 
     if not posture or not isinstance(mediapipe, list) or len(mediapipe) == 0:
@@ -70,7 +71,7 @@ def receive_pose():
         }), 400
 
     ref_landmarks_all = REFERENCE_DATA[posture]["landmarks"]
-    ref_angles_all = REFERENCE_DATA[posture]["angles"]
+    # ref_angles_all = REFERENCE_DATA[posture]["angles"]
     
     
     results = []
