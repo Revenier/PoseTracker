@@ -54,7 +54,7 @@ def body_part_index_priority(posture):
             'description': 'shoulders, elbows, wrists, hips, knees'
         },
         'situp': {
-            'indices': [0, 1, 2, 33, 34, 35, 36, 37, 38, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86],  # nose, shoulders, hips, knees, ankles
+            'indices': [0, 1, 2, 33, 34, 35, 36, 37, 38, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86],
             'description': 'nose, shoulders, hips, knees, ankles'
         },
         'squat': {
@@ -71,6 +71,52 @@ def body_part_index_priority(posture):
         'indices': list(range(99)),
         'description': 'all landmarks'
     })
+
+def body_part_feedback(posture):
+    body_parts = {}
+    if posture == 'push_up':
+        body_parts = {
+        'arms_left': ([11, 13, 15], "left arm"),     
+        'arms_right': ([12, 14, 16], "right arm"),    
+        'legs_left': ([23, 25, 27], "left leg"),       
+        'legs_right': ([24, 26, 28], "right leg"),     
+        'shoulder_left': ([11], "left shoulder"),
+        'shoulder_right': ([12], "right shoulder"),
+        'hip_left': ([23], "left hip"),
+        'hip_right': ([24], "right hip"),
+        'knee_left': ([25], "left knee"),
+        'knee_right': ([26], "right knee"),
+        'ankle_left': ([27], "left ankle"),
+        'ankle_right': ([28], "right ankle"),
+    }
+    elif posture == 'squat':
+        body_parts = {
+        'legs_left': ([23, 25, 27], "left leg"),       
+        'legs_right': ([24, 26, 28], "right leg"),     
+        'hip_left': ([23], "left hip"),
+        'hip_right': ([24], "right hip"),
+        'knee_left': ([25], "left knee"),
+        'knee_right': ([26], "right knee"),
+    }
+        
+    elif posture == 'situp':
+        body_parts = {
+        'torso': ([11, 12, 23, 24], "torso"),
+        'shoulder_left': ([11], "left shoulder"),
+        'shoulder_right': ([12], "right shoulder"),
+    }
+        
+    elif posture == 'jumping_jack':
+        body_parts = {
+        'arms_left': ([11, 13, 15], "left arm"),     
+        'arms_right': ([12, 14, 16], "right arm"),    
+        'legs_left': ([23, 25, 27], "left leg"),       
+        'legs_right': ([24, 26, 28], "right leg"),     
+        'shoulder_left': ([11], "left shoulder"),
+        'shoulder_right': ([12], "right shoulder"),
+    }
+        
+    return body_parts
 
 def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     # ensure ref_norm precomputed and cached for posture
@@ -109,32 +155,16 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     POOR = t['POOR']
 
     input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
+    # print(f"Debug: input_pose shape: {input_pose}", flush=True)
     ref_pose = ref_pose_temp.reshape(33, 3)
+    # print(f"Debug: ref_pose shape: {ref_pose}", flush=True)
 
     # Body part definitions
-    body_parts = {
-        'arms_left': ([11, 13, 15], "left arm"),     
-        'arms_right': ([12, 14, 16], "right arm"),    
-        'legs_left': ([23, 25, 27], "left leg"),       
-        'legs_right': ([24, 26, 28], "right leg"),     
-        'shoulder_left': ([11], "left shoulder"),
-        'shoulder_right': ([12], "right shoulder"),
-        'hip_left': ([23], "left hip"),
-        'hip_right': ([24], "right hip"),
-        'knee_left': ([25], "left knee"),
-        'knee_right': ([26], "right knee"),
-        'ankle_left': ([27], "left ankle"),
-        'ankle_right': ([28], "right ankle"),
-        # 'arms': ([11, 12, 13, 14, 15, 16], "arms"),
-        # 'legs': ([23, 24, 25, 26, 27, 28], "legs"),
-        # 'torso': ([11, 12, 23, 24], "torso"),
-        # 'shoulders': ([11, 12], "shoulders"),
-        # 'hips': ([23, 24], "hips")
-    }
-
+    body_parts = body_part_feedback(posture)
     issues = []
     for part_name, (indices, display_name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
+        print(f"Debug: {part_name} difference: {part_diff}", flush=True)
         issues.append((display_name, part_diff, part_name, indices))
 
     # Sort by part_diff descending and take top 2
