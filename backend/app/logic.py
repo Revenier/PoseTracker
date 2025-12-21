@@ -162,7 +162,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     issues = []
     for part_name, (indices, display_name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-        print(f"Debug: {part_name} difference: {part_diff}", flush=True)
+        # print(f"Debug: {part_name} difference: {part_diff}", flush=True)
         issues.append((display_name, part_diff, part_name, indices))
 
     # Sort by part_diff descending and take top 2
@@ -343,17 +343,48 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
     mean_ref = np.mean(ref_pose[indices], axis=0)
     diff = mean_input - mean_ref
 
-    xy_threshold = 0.03  # Lowered for more sensitivity
-    z_threshold = 0.03
+    # x_threshold = 0.03  # Lowered for more sensitivity
+    # y_threshold = 0.05
+    # z_threshold = 0.10
+
+    POSTURE_THRESHOLDS = {
+        # X: left/right, Y: up/down, Z: forward/backward
+        "push_up": {
+            "x": 0.08,
+            "y": 0.08,
+            "z": 0.08,
+        },
+        "squat": {
+            "x": 0.06,
+            "y": 0.05,
+            "z": 0.12,
+        },
+        "situp": {
+            "x": 0.08,
+            "y": 0.01,
+            "z": 0.06,
+        },
+        "jumping_jack": {
+            "x": 0.05,
+            "y": 0.05,
+            "z": 0.07,
+        }
+    } 
+    thresholds = POSTURE_THRESHOLDS[posture]
+    x_threshold = thresholds["x"]
+    y_threshold = thresholds["y"]
+    z_threshold = thresholds["z"]
 
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     directions = []
-    if abs(diff[0]) > xy_threshold:
+    if abs(diff[0]) > x_threshold:  # Ini itu untuk hitung kanan ato kiri dimana dia kurang tepat
         directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
-    if abs(diff[1]) > xy_threshold:
+    if abs(diff[1]) > y_threshold: # Ini itu untuk hitung atas ato bawah dimana dia kurang tepat
         directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
-    if abs(diff[2]) > z_threshold:
+    if abs(diff[2]) > z_threshold: # ini itu untuk hitung maju ato mundur dimana dia kurang tepat
         directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
+
+    print("[Diff]", diff[0],diff[1],diff[2],flush=True)
 
     if directions:
         # Compose a natural sentence
@@ -362,5 +393,10 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
         feedback.append(f"{movement.capitalize()} your {display_name} slightly.")
     else:
         feedback.append(f"Fine-tune your {display_name} position.")
+
+    print(
+    f"[DIRECTION] part={display_name}, triggered={directions}",
+    flush=True
+)
 
     return feedback[:2]
