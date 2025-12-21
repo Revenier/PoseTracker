@@ -76,14 +76,13 @@ def body_part_feedback(posture):
     body_parts = {}
     if posture == 'push_up':
         body_parts = {
-        'arms_left': ([11, 13, 15], "left arm"),     
-        'arms_right': ([12, 14, 16], "right arm"),    
-        'legs_left': ([23, 25, 27], "left leg"),       
-        'legs_right': ([24, 26, 28], "right leg"),     
         'shoulder_left': ([11], "left shoulder"),
         'shoulder_right': ([12], "right shoulder"),
-        'hip_left': ([23], "left hip"),
-        'hip_right': ([24], "right hip"),
+        'elbow_left': ([13], "left elbow"),
+        'elbow_right': ([14], "right elbow"),
+        'wrist_left': ([15], "left wrist"),
+        'wrist_right': ([16], "right wrist"),
+        'hip': ([23, 24], "hip"),
         'knee_left': ([25], "left knee"),
         'knee_right': ([26], "right knee"),
         'ankle_left': ([27], "left ankle"),
@@ -91,12 +90,11 @@ def body_part_feedback(posture):
     }
     elif posture == 'squat':
         body_parts = {
-        'legs_left': ([23, 25, 27], "left leg"),       
-        'legs_right': ([24, 26, 28], "right leg"),     
-        'hip_left': ([23], "left hip"),
-        'hip_right': ([24], "right hip"),
+        'hip': ([23, 24], "hip"),
         'knee_left': ([25], "left knee"),
         'knee_right': ([26], "right knee"),
+        'ankle_left': ([27], "left ankle"),
+        'ankle_right': ([28], "right ankle"),
     }
         
     elif posture == 'situp':
@@ -218,7 +216,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
         }
     return result
 
-def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
+def bak_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
    
     feedback = []
 
@@ -330,3 +328,39 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
             feedback.append(f"{tip}. {'Lower' if diff[1] > 0 else 'Raise'} hips")
     
     return feedback[:2] 
+
+
+def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
+    """
+    Generate actionable feedback for a specific body part by comparing input_pose and ref_pose.
+    Returns a list of suggestions for the user to improve their posture.
+    """
+    feedback = []
+    body_parts = body_part_feedback(posture)
+    display_name = body_parts.get(part_name, (indices, part_name))[1]
+
+    mean_input = np.mean(input_pose[indices], axis=0)
+    mean_ref = np.mean(ref_pose[indices], axis=0)
+    diff = mean_input - mean_ref
+
+    xy_threshold = 0.03  # Lowered for more sensitivity
+    z_threshold = 0.03
+
+    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+    directions = []
+    if abs(diff[0]) > xy_threshold:
+        directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
+    if abs(diff[1]) > xy_threshold:
+        directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
+    if abs(diff[2]) > z_threshold:
+        directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
+
+    if directions:
+        # Compose a natural sentence
+        movement = " and ".join(directions)
+        # Example: "Move your left arm to the left and raise it slightly."
+        feedback.append(f"{movement.capitalize()} your {display_name} slightly.")
+    else:
+        feedback.append(f"Fine-tune your {display_name} position.")
+
+    return feedback[:2]
