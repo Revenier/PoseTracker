@@ -35,7 +35,7 @@ def group_landmark_issue(results, score):
         if not isinstance(r, dict):
             continue
         lm = r.get('landmarks', {})
-        fb = lm.get('status')
+        fb = lm.get('issues')
         if fb and not lm.get('correct', False):
             feedbacks.append(str(fb))
 
@@ -62,7 +62,7 @@ def group_landmark_feedback(results):
         if not isinstance(r, dict):
             continue
         lm = r.get('landmarks', {})
-        fb = lm.get('feedback') or lm.get('status')
+        fb = lm.get('feedback')
         if fb and not lm.get('correct', False):
             feedbacks.append(str(fb))
 

@@ -113,81 +113,79 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
     # Body part definitions
     body_parts = {
-        'arms': ([11,13,15,12,14,16], "arms"),
-        'legs': ([23,25,27,24,26,28], "legs"),
-        'torso': ([11,12,23,24], "torso"),
-        'shoulders': ([11,12], "shoulders"),
-        'hips': ([23,24], "hips")
+        'arms_left': ([11, 13, 15], "left arm"),     
+        'arms_right': ([12, 14, 16], "right arm"),    
+        'legs_left': ([23, 25, 27], "left leg"),       
+        'legs_right': ([24, 26, 28], "right leg"),     
+        'shoulder_left': ([11], "left shoulder"),
+        'shoulder_right': ([12], "right shoulder"),
+        'hip_left': ([23], "left hip"),
+        'hip_right': ([24], "right hip"),
+        'knee_left': ([25], "left knee"),
+        'knee_right': ([26], "right knee"),
+        'ankle_left': ([27], "left ankle"),
+        'ankle_right': ([28], "right ankle"),
+        # 'arms': ([11, 12, 13, 14, 15, 16], "arms"),
+        # 'legs': ([23, 24, 25, 26, 27, 28], "legs"),
+        # 'torso': ([11, 12, 23, 24], "torso"),
+        # 'shoulders': ([11, 12], "shoulders"),
+        # 'hips': ([23, 24], "hips")
     }
-    
-    # Calculate shoulder width as reference for relative measurements
-    shoulder_width_input = np.linalg.norm(input_pose[11] - input_pose[12])
-    shoulder_width_ref = np.linalg.norm(ref_pose[11] - ref_pose[12])
-    
+
     issues = []
-    detailed_feedback = []
-    
     for part_name, (indices, display_name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-        
-        if part_diff > 0.01:
-            issues.append(display_name)
-            
-            # Get detailed directional feedback for this body part
+        issues.append((display_name, part_diff, part_name, indices))
+
+    # Sort by part_diff descending and take top 2
+    issues_sorted = sorted(issues, key=lambda x: x[1], reverse=True)[:2]
+
+    detailed_feedback = []
+    top_issue_names = []
+    for display_name, part_diff, part_name, indices in issues_sorted:
+        if part_diff > 0: 
+            top_issue_names.append(display_name)
             directions = get_directional_feedback(
                 posture,
-                part_name, 
-                indices, 
-                input_pose, 
+                part_name,
+                indices,
+                input_pose,
                 ref_pose,
             )
-            
+            print(f"Debug: {part_name} directions: {directions}")
             if directions:
                 detailed_feedback.extend(directions)
-            
-    # Limit to top 2 most important issues
-    detailed_feedback = detailed_feedback[:2]
-    
+
+    feedback_text = " | ".join(detailed_feedback)
+    issue_text = f"Adjust your {' and '.join(top_issue_names)}" if top_issue_names else ""
+
     if best_score > VERY_GOOD:
         result = {
             "correct": True,
-            "status": "Perfect form",
+            "issues": "Perfect form",
             "feedback": "Perfect form! Keep it up!",
             "score": best_score,
         }
-    elif issues:
-        # Generate feedback with specific directions
-        feedback_text = " | ".join(detailed_feedback)
-        issue_text = f"Adjust your {' and '.join(issues[:2])}"
-        
+    elif top_issue_names:
         if best_score > GOOD:
             correct = True
-            status = f"{issue_text}"
-            feedback = f"{feedback_text}"
         elif best_score > POOR:
             correct = False
-            status = f"{issue_text}"
-            feedback = f"{feedback_text}"
         else:
             correct = False
-            status = f"{issue_text}"
-            feedback = f"{feedback_text}"
-        
         result = {
             "correct": correct,
-            "status": status,
-            "feedback": feedback,
+            "issues": issue_text,
+            "feedback": feedback_text,
             "score": best_score,
-            "suggestions": detailed_feedback  # Separate field for detailed tips
         }
     else:
         result = {
             "correct": False,
-            "status": "Incorrect",
+            "issues": "Incorrect position",
             "feedback": "Wrong form, try again!",
             "score": best_score,
         }
-
     return result
 
 def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
