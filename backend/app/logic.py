@@ -135,11 +135,12 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     priority_config = body_part_index_priority(posture)
     priority_indices = priority_config['indices']
 
-    # Normalize q_priority to unit vector
-    q_norm[priority_indices] = ref_pose_temp[priority_indices]
+    mixed_pose = ref_pose_temp.copy()
+    mixed_pose[priority_indices] = q_norm[priority_indices]
+
     # Similarity using only priority points
-    sims = ref_pose_temp.dot(q_norm)
-    best_score = round(float(sims), 4)    
+    sims = ref_pose_temp.dot(mixed_pose)
+    best_score = round(float(sims), 4)
     
     thresholds = {
         'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
@@ -152,9 +153,9 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     GOOD = t['GOOD']
     POOR = t['POOR']
 
-    input_pose = normalize([input_landmarks.flatten()], axis=1)[0].reshape(33, 3)
+    input_pose = mixed_pose.reshape(33, 3)
     # print(f"Debug: input_pose shape: {input_pose}", flush=True)
-    ref_pose = ref_pose_temp.reshape(33, 3)
+    ref_pose = ref_norm[best_idx_temp].reshape(33, 3)
     # print(f"Debug: ref_pose shape: {ref_pose}", flush=True)
 
     # Body part definitions
