@@ -76,8 +76,8 @@ def body_part_feedback(posture):
     body_parts = {}
     if posture == 'push_up':
         body_parts = {
-        'shoulder_left': ([11], "left shoulder"),
-        'shoulder_right': ([12], "right shoulder"),
+        # 'shoulder_left': ([11], "left shoulder"),
+        # 'shoulder_right': ([12], "right shoulder"),
         'elbow_left': ([13], "left elbow"),
         'elbow_right': ([14], "right elbow"),
         'wrist_left': ([15], "left wrist"),
@@ -100,8 +100,8 @@ def body_part_feedback(posture):
     elif posture == 'situp':
         body_parts = {
         'torso': ([11, 12, 23, 24], "torso"),
-        'shoulder_left': ([11], "left shoulder"),
-        'shoulder_right': ([12], "right shoulder"),
+        # 'shoulder_left': ([11], "left shoulder"),
+        # 'shoulder_right': ([12], "right shoulder"),
     }
         
     elif posture == 'jumping_jack':
@@ -110,8 +110,8 @@ def body_part_feedback(posture):
         'arms_right': ([12, 14, 16], "right arm"),    
         'legs_left': ([23, 25, 27], "left leg"),       
         'legs_right': ([24, 26, 28], "right leg"),     
-        'shoulder_left': ([11], "left shoulder"),
-        'shoulder_right': ([12], "right shoulder"),
+        # 'shoulder_left': ([11], "left shoulder"),
+        # 'shoulder_right': ([12], "right shoulder"),
     }
         
     return body_parts
@@ -333,11 +333,159 @@ def bak_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
     
     return feedback[:2] 
 
+# def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
+#     """
+#     Generate actionable feedback for a specific body part by comparing input_pose and ref_pose.
+#     Returns a list of suggestions for the user to improve their posture.
+#     """
+#     feedback = []
+#     body_parts = body_part_feedback(posture)
+#     display_name = body_parts.get(part_name, (indices, part_name))[1]
+
+#     mean_input = np.mean(input_pose[indices], axis=0)
+#     mean_ref = np.mean(ref_pose[indices], axis=0)
+#     diff = mean_input - mean_ref
+
+#     # x_threshold = 0.03  # Lowered for more sensitivity
+#     # y_threshold = 0.05
+#     # z_threshold = 0.10
+
+#     POSTURE_THRESHOLDS = {
+#         # X: left/right, Y: up/down, Z: forward/backward
+#         "push_up": {
+#             "x": 0.08,
+#             "y": 0.08,
+#             "z": 0.08,
+#         },
+#         "squat": {
+#             "x": 0.06,
+#             "y": 0.05,
+#             "z": 0.12,
+#         },
+#         "situp": {
+#             "x": 0.08,
+#             "y": 0.01,
+#             "z": 0.06,
+#         },
+#         "jumping_jack": {
+#             "x": 0.05,
+#             "y": 0.05,
+#             "z": 0.07,
+#         }
+#     } 
+#     thresholds = POSTURE_THRESHOLDS[posture]
+#     x_threshold = thresholds["x"]
+#     y_threshold = thresholds["y"]
+#     z_threshold = thresholds["z"]
+
+#     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+#     directions = []
+#     if abs(diff[0]) > x_threshold:  # Ini itu untuk hitung kanan ato kiri dimana dia kurang tepat
+#         directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
+#     if abs(diff[1]) > y_threshold: # Ini itu untuk hitung atas ato bawah dimana dia kurang tepat
+#         directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
+#     if abs(diff[2]) > z_threshold: # ini itu untuk hitung maju ato mundur dimana dia kurang tepat
+#         directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
+
+#     print("[Diff]", diff[0],diff[1],diff[2],flush=True)
+
+#     if directions:
+#         # Compose a natural sentence
+#         movement = " and ".join(directions)
+#         # Example: "Move your left arm to the left and raise it slightly."
+#         feedback.append(f"{movement.capitalize()} your {display_name} slightly.")
+#     else:
+#         feedback.append(f"Fine-tune your {display_name} position.")
+
+#     print(
+#     f"[DIRECTION] part={display_name}, triggered={directions}",
+#     flush=True
+# )
+
+#     return feedback[:2]
+
+JOINT_THRESHOLDS = {
+
+    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+    "squat": {
+        "hip": {"x": 999, "y": 0.07, "z": 0.12},
+        "knee_left": {"x": 0.05, "y": 0.06, "z": 0.10},
+        "knee_right": {"x": 0.05, "y": 0.06, "z": 0.10},
+        "ankle_left": {"x": 0.04, "y": 999, "z": 999},
+        "ankle_right": {"x": 0.04, "y": 999, "z": 999},
+    },
+    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+    "push_up": {
+        # "shoulder_left": {"x": 999, "y": 0.08, "z": 999},
+        # "shoulder_right": {"x": 999, "y": 0.08, "z": 999},
+        "elbow_left": {"x": 0.03, "y": 0.06, "z": 0.08},
+        "elbow_right": {"x": 0.03, "y": 0.06, "z": 0.08},
+        "wrist_left": {"x": 0.03, "y": 999, "z": 999},
+        "wrist_right": {"x": 0.03, "y": 999, "z": 999},
+        "hip": {"x": 999, "y": 0.05, "z": 0.08},
+        "knee_left": {"x": 0.03, "y": 0.03, "z": 999},
+        "knee_right": {"x": 0.03, "y": 0.03, "z": 999},
+        "ankle_left": {"x": 0.03, "y": 999, "z": 999},
+        "ankle_right": {"x": 0.03, "y": 999, "z": 999},
+    },
+    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+    "situp": {
+        "torso": {"x": 0.08, "y": 0.01, "z": 0.06},
+        # "shoulder_left": {"x": 999, "y": 0.02, "z": 0.05},
+        # "shoulder_right": {"x": 999, "y": 0.02, "z": 0.05},
+    },
+    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
+    "jumping_jack": {
+        "arms_left": {"x": 0.05, "y": 0.05, "z": 999},
+        "arms_right": {"x": 0.05, "y": 0.05, "z": 999},
+        "legs_left": {"x": 0.06, "y": 0.06, "z": 999},
+        "legs_right": {"x": 0.06, "y": 0.06, "z": 999},
+        # "shoulder_left": {"x": 0.05, "y": 0.05, "z": 999},
+        # "shoulder_right": {"x": 0.05, "y": 0.05, "z": 999},
+    },
+}
+
+# AXIS FEEDBACK MAP dengan axis yang bisa di-skip (None = skip)
+AXIS_FEEDBACK_MAP = {
+    "squat": {
+        "hip": {"x": "horizontal", "y": "lower", "z": "forward"},
+        "knee_left": {"x": "align", "y": "bend", "z": "forward"},
+        "knee_right": {"x": "align", "y": "bend", "z": "forward"},
+        "ankle_left": {"x": "align", "y": None, "z": None},
+        "ankle_right": {"x": "align", "y": None, "z": None},
+    },
+    "push_up": {
+        # "shoulder_left": {"x": "align", "y": "level", "z": "forward"},
+        # "shoulder_right": {"x": "align", "y": "level", "z": "forward"},
+        "elbow_left": {"x": "align", "y": "bend", "z": "forward"},
+        "elbow_right": {"x": "align", "y": "bend", "z": "forward"},
+        "wrist_left": {"x": "align", "y": "level", "z": "forward"},
+        "wrist_right": {"x": "align", "y": "level", "z": "forward"},
+        "hip": {"x": "align", "y": "level", "z": "forward"},
+        "knee_left": {"x": "align", "y": "straight", "z": None},
+        "knee_right": {"x": "align", "y": "straight", "z": None},
+        "ankle_left": {"x": "align", "y": None, "z": None},
+        "ankle_right": {"x": "align", "y": None, "z": None},
+    },
+    "situp": {
+        "torso": {"x": "center", "y": "raise", "z": "forward"},
+        # "shoulder_left": {"x": "align", "y": "raise", "z": "forward"},
+        # "shoulder_right": {"x": "align", "y": "raise", "z": "forward"},
+    },
+    "jumping_jack": {
+        "arms_left": {"x": "spread", "y": "raise", "z": "forward"},
+        "arms_right": {"x": "spread", "y": "raise", "z": "forward"},
+        "legs_left": {"x": "spread", "y": "jump", "z": "forward"},
+        "legs_right": {"x": "spread", "y": "jump", "z": "forward"},
+        # "shoulder_left": {"x": "align", "y": "raise", "z": "forward"},
+        # "shoulder_right": {"x": "align", "y": "raise", "z": "forward"},
+    },
+}
 
 def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
     """
     Generate actionable feedback for a specific body part by comparing input_pose and ref_pose.
-    Returns a list of suggestions for the user to improve their posture.
+    Uses static thresholds per joint per posture.
     """
     feedback = []
     body_parts = body_part_feedback(posture)
@@ -347,60 +495,69 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
     mean_ref = np.mean(ref_pose[indices], axis=0)
     diff = mean_input - mean_ref
 
-    # x_threshold = 0.03  # Lowered for more sensitivity
-    # y_threshold = 0.05
-    # z_threshold = 0.10
+    # Ambil threshold spesifik untuk joint ini
+    posture_thresholds = JOINT_THRESHOLDS.get(posture, {})
+    part_thresholds = posture_thresholds.get(part_name, {"x": 0.06, "y": 0.06, "z": 0.10})
+    
+    x_threshold = part_thresholds.get("x", 0.06)
+    y_threshold = part_thresholds.get("y", 0.06)
+    z_threshold = part_thresholds.get("z", 0.10)
+    
+    # Ambil feedback map
+    posture_map = AXIS_FEEDBACK_MAP.get(posture, {})
+    part_map = posture_map.get(part_name, {"x": "move", "y": "adjust", "z": "move"})
 
-    POSTURE_THRESHOLDS = {
-        # X: left/right, Y: up/down, Z: forward/backward
-        "push_up": {
-            "x": 0.08,
-            "y": 0.08,
-            "z": 0.08,
-        },
-        "squat": {
-            "x": 0.06,
-            "y": 0.05,
-            "z": 0.12,
-        },
-        "situp": {
-            "x": 0.08,
-            "y": 0.01,
-            "z": 0.06,
-        },
-        "jumping_jack": {
-            "x": 0.05,
-            "y": 0.05,
-            "z": 0.07,
-        }
-    } 
-    thresholds = POSTURE_THRESHOLDS[posture]
-    x_threshold = thresholds["x"]
-    y_threshold = thresholds["y"]
-    z_threshold = thresholds["z"]
-
-    # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     directions = []
-    if abs(diff[0]) > x_threshold:  # Ini itu untuk hitung kanan ato kiri dimana dia kurang tepat
-        directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
-    if abs(diff[1]) > y_threshold: # Ini itu untuk hitung atas ato bawah dimana dia kurang tepat
-        directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
-    if abs(diff[2]) > z_threshold: # ini itu untuk hitung maju ato mundur dimana dia kurang tepat
-        directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
+    
+    # X-axis (left/right)
+    if x_threshold is not None and abs(diff[0]) > x_threshold:
+        x_feedback_type = part_map.get("x", "move")
+        if x_feedback_type == "move":
+            directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
+        elif x_feedback_type == "align":
+            directions.append(f"{'move right' if diff[0] > 0 else 'move left'}")
+        elif x_feedback_type == "spread":
+            directions.append(f"{'spread wider' if diff[0] > 0 else 'bring closer'}")
+        elif x_feedback_type == "center":
+            directions.append(f"center your position")
+    
+    # Y-axis (up/down)
+    if y_threshold is not None and abs(diff[1]) > y_threshold:
+        y_feedback_type = part_map.get("y")
+        if y_feedback_type is None:
+            pass
+        elif y_feedback_type == "raise":
+            directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
+        elif y_feedback_type == "lower":
+            directions.append(f"{'lower' if diff[1] > 0 else 'raise'}")
+        elif y_feedback_type == "bend":
+            directions.append(f"{'bend more' if diff[1] > 0 else 'straighten'}")
+        elif y_feedback_type == "straight":
+            directions.append(f"keep legs straight")
+        elif y_feedback_type == "level":
+            directions.append(f"keep level")
+        elif y_feedback_type == "jump":
+            directions.append(f"{'jump higher' if diff[1] > 0 else 'jump lower'}")
+    
+    # Z-axis (forward/backward)
+    if z_threshold is not None and abs(diff[2]) > z_threshold:
+        z_feedback_type = part_map.get("z")
+        if z_feedback_type is None:
+            pass
+        elif z_feedback_type == "forward":
+            directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
+        elif z_feedback_type == "move":
+            directions.append(f"move {'forward' if diff[2] > 0 else 'backward'}")
 
-    print("[Diff]", diff[0],diff[1],diff[2],flush=True)
+    print(f"[Diff] {part_name}: x={diff[0]:.4f}, y={diff[1]:.4f}, z={diff[2]:.4f}", flush=True)
+    print(f"[Thresholds] {part_name}: x={x_threshold}, y={y_threshold}, z={z_threshold}", flush=True)
 
     if directions:
-        # Compose a natural sentence
         movement = " and ".join(directions)
-        # Example: "Move your left arm to the left and raise it slightly."
         feedback.append(f"{movement.capitalize()} your {display_name} slightly.")
     else:
         feedback.append(f"Fine-tune your {display_name} position.")
 
-    print(
-    f"[DIRECTION] part={display_name}, triggered={directions}",
-    flush=True
-)
+    print(f"[DIRECTION] part={display_name}, triggered={directions}", flush=True)
 
     return feedback[:2]
