@@ -130,22 +130,26 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
 
     sims_temp = ref_norm.dot(q_norm) 
     best_idx_temp = int(np.argmax(sims_temp))
+    # get the reference pose
     ref_pose_temp = ref_norm[best_idx_temp]
 
+    # Get priority indices for the posture
     priority_config = body_part_index_priority(posture)
     priority_indices = priority_config['indices']
 
+    # copy reference pose to a new variable
     mixed_pose = ref_pose_temp.copy()
+    # overwrite priority indices with input pose
     mixed_pose[priority_indices] = q_norm[priority_indices]
 
-    # Similarity using only priority points
+    # bandingin reference pose dengan mixed pose
     sims = ref_pose_temp.dot(mixed_pose)
     best_score = round(float(sims), 4)
     
     thresholds = {
         'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
-        'squat':        {'VERY_GOOD': 0.96, 'GOOD': 0.93,  'POOR': 0.90},
-        'situp':        {'VERY_GOOD': 0.98,  'GOOD': 0.95, 'POOR': 0.91},
+        'squat':        {'VERY_GOOD': 0.99, 'GOOD': 0.96,  'POOR': 0.93},
+        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.98, 'POOR': 0.97},
         'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
     }
     t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.93})
@@ -154,16 +158,14 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     POOR = t['POOR']
 
     input_pose = mixed_pose.reshape(33, 3)
-    # print(f"Debug: input_pose shape: {input_pose}", flush=True)
     ref_pose = ref_norm[best_idx_temp].reshape(33, 3)
-    # print(f"Debug: ref_pose shape: {ref_pose}", flush=True)
 
     # Body part definitions
     body_parts = body_part_feedback(posture)
     issues = []
     for part_name, (indices, display_name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
-        # print(f"Debug: {part_name} difference: {part_diff}", flush=True)
+        print(f"Debug: {part_name} difference: {part_diff}", flush=True)
         issues.append((display_name, part_diff, part_name, indices))
 
     # Sort by part_diff descending and take top 2
@@ -181,7 +183,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
                 input_pose,
                 ref_pose,
             )
-            print(f"Debug: {part_name} directions: {directions}")
+            # print(f"Debug: {part_name} directions: {directions}")
             if directions:
                 detailed_feedback.extend(directions)
 
