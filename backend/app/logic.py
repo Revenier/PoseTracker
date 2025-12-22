@@ -157,6 +157,14 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     GOOD = t['GOOD']
     POOR = t['POOR']
 
+    if best_score > VERY_GOOD:
+       return {
+            "correct": True,
+            "issues": "Perfect form",
+            "feedback": "Perfect form! Keep it up!",
+            "score": best_score,
+        }
+    
     input_pose = mixed_pose.reshape(33, 3)
     ref_pose = ref_norm[best_idx_temp].reshape(33, 3)
 
@@ -190,14 +198,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
     feedback_text = " | ".join(detailed_feedback)
     issue_text = f"Adjust your {' and '.join(top_issue_names)}" if top_issue_names else ""
 
-    if best_score > VERY_GOOD:
-        result = {
-            "correct": True,
-            "issues": "Perfect form",
-            "feedback": "Perfect form! Keep it up!",
-            "score": best_score,
-        }
-    elif top_issue_names:
+    if top_issue_names:
         if best_score > GOOD:
             correct = True
         elif best_score > POOR:
