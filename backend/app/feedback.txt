@@ -1,0 +1,19 @@
+{
+    squat: [
+        1. kaki kanan kaki kiri kurang lebar atau terlalu lebar.
+
+    ],
+    Push up: [
+        1. 
+        2. Tangan kurang lebar atau terlalu lebar
+        3. Siku menekuk ke belakang, bukan ke samping. (hold) 
+    ], 
+    sit up: [
+        1. punggung, leher, paha lurus
+        2. input Ankle sumbu Y+ ga boleh diatas ref
+    ], 
+    jumping jack: [
+        1. Tangan kurang terbuka, atau terlalu rapat
+        2. Kaki kurang terbuka, atau kurang rapat.
+    ]
+}
