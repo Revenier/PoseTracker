@@ -53,7 +53,7 @@ app = create_app()
 def receive_pose():
     data = request.get_json()
     posture = data.get('posture')
-    print(f"Received posture: {posture}")
+    facingRight = data.get('facingRight')
     mediapipe = data.get('mediapipe', [])
 
     if not posture or not isinstance(mediapipe, list) or len(mediapipe) == 0:
@@ -85,7 +85,7 @@ def receive_pose():
             
 
             array = align_landmarks(np.array(arr).reshape((33, 3)))
-            landmark_result = landmark_logic(posture, array, ref_landmarks=ref_landmarks_all)
+            landmark_result = landmark_logic(posture, array, facingRight, ref_landmarks=ref_landmarks_all)
             print(f"Frame {idx} processed: {landmark_result}", flush=True)
 
             results.append({
@@ -115,7 +115,9 @@ def receive_pose():
                 }
         })
 
-    score = correct_count*100/total
+    score = 0
+    if total > 0:
+        score = int((correct_count / total) * 100)
     if score >= 80:
         status = True
     else:

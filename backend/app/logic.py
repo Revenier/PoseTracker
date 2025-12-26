@@ -119,7 +119,7 @@ def body_part_feedback(posture):
         
     return body_parts
 
-def landmark_logic(posture, input_landmarks, ref_landmarks=None):
+def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     # ensure ref_norm precomputed and cached for posture
     if posture not in _REF_CACHE:
         ref_norm = normalize(ref_landmarks, axis=1)
@@ -193,6 +193,7 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
                 indices,
                 input_pose,
                 ref_pose,
+                facingRight
             )
             # print(f"Debug: {part_name} directions: {directions}")
             if directions:
@@ -218,8 +219,8 @@ def landmark_logic(posture, input_landmarks, ref_landmarks=None):
             result.extend(parts)
 
     final_feedback = " ".join(result)
-    # feedback_text = final_feedback 
-    feedback_text = " | ".join(detailed_feedback)
+    feedback_text =  final_feedback
+    # feedback_text = " | ".join(detailed_feedback)
     issue_text = f"Adjust your {' and '.join(top_issue_names)}" if top_issue_names else ""
 
     if top_issue_names:
@@ -362,24 +363,24 @@ JOINT_THRESHOLDS = {
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     "squat": {
         "hip": {"x": 999, "y": 0.07, "z": 0.12},
-        "knee_left": {"x": 0.03, "y": 0.06, "z": 0.10},
-        "knee_right": {"x": 0.03, "y": 0.06, "z": 0.10},
-        "ankle_left": {"x": 0.03, "y": 999, "z": 999},
-        "ankle_right": {"x": 0.03, "y": 999, "z": 999},
+        "knee_left": {"x": 0.02, "y": 0.06, "z": 0.10},
+        "knee_right": {"x": 0.02, "y": 0.06, "z": 0.10},
+        "ankle_left": {"x": 0.02, "y": 999, "z": 999},
+        "ankle_right": {"x": 0.02, "y": 999, "z": 999},
     },
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     "push_up": {
         # "shoulder_left": {"x": 999, "y": 0.08, "z": 999},
         # "shoulder_right": {"x": 999, "y": 0.08, "z": 999},
-        "elbow_left": {"x": 0.03, "y": 0.06, "z": 0.08},
-        "elbow_right": {"x": 0.03, "y": 0.06, "z": 0.08},
-        "wrist_left": {"x": 0.03, "y": 999, "z": 999},
-        "wrist_right": {"x": 0.03, "y": 999, "z": 999},
+        "elbow_left": {"x": 0.02, "y": 0.06, "z": 0.08},
+        "elbow_right": {"x": 0.02, "y": 0.06, "z": 0.08},
+        "wrist_left": {"x": 0.02, "y": 999, "z": 999},
+        "wrist_right": {"x": 0.02, "y": 999, "z": 999},
         "hip": {"x": 999, "y": 0.05, "z": 0.08},
-        "knee_left": {"x": 0.03, "y": 0.03, "z": 999},
-        "knee_right": {"x": 0.03, "y": 0.03, "z": 999},
-        "ankle_left": {"x": 0.03, "y": 999, "z": 999},
-        "ankle_right": {"x": 0.03, "y": 999, "z": 999},
+        "knee_left": {"x": 0.02, "y": 0.02, "z": 999},
+        "knee_right": {"x": 0.02, "y": 0.02, "z": 999},
+        "ankle_left": {"x": 0.02, "y": 999, "z": 999},
+        "ankle_right": {"x": 0.02, "y": 999, "z": 999},
     },
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     "situp": {
@@ -435,7 +436,7 @@ AXIS_FEEDBACK_MAP = {
     },
 }
 
-def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
+def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, facingRight):
     """
     Generate actionable feedback for a specific body part by comparing input_pose and ref_pose.
     Uses static thresholds per joint per posture.
@@ -468,7 +469,12 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose):
         if x_feedback_type == "move":
             directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
         elif x_feedback_type == "align":
-            directions.append(f"{'move right' if diff[0] > 0 else 'move left'}")
+            if facingRight == True:
+                directions.append(f"{'move forward' if diff[0] > 0 else 'move backward'}")
+            elif facingRight == False:
+                directions.append(f"{'move backward' if diff[0] > 0 else 'move forward'}")
+            else :
+                directions.append(f"{'move right' if diff[0] > 0 else 'move left'}")
         elif x_feedback_type == "spread":
             directions.append(f"{'spread wider' if diff[0] > 0 else 'bring closer'}")
         elif x_feedback_type == "center":
