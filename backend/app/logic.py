@@ -102,8 +102,8 @@ def body_part_feedback(posture):
         
     elif posture == 'situp':
         body_parts = {
-        'torso': ([11, 12, 23, 24], "torso"),
         'head': ([0], "head"),
+        'torso': ([11, 12, 23, 24], "torso"),
         # 'shoulder_left': ([11], "left shoulder"),
         # 'shoulder_right': ([12], "right shoulder"),
     }
@@ -386,8 +386,8 @@ JOINT_THRESHOLDS = {
     },
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     "situp": {
-        "torso": {"x": 0.08, "y": 0.02, "z": 0.06},
         "head": {"x": 0.01, "y": 0.02, "z": 999},
+        "torso": {"x": 0.08, "y": 0.03, "z": 0.06},
         # "shoulder_left": {"x": 999, "y": 0.02, "z": 0.05},
         # "shoulder_right": {"x": 999, "y": 0.02, "z": 0.05},
     },
@@ -425,8 +425,8 @@ AXIS_FEEDBACK_MAP = {
         "ankle_right": {"x": "align", "y": None, "z": None},
     },
     "situp": {
-        "torso": {"x": "center", "y": "raise", "z": "forward"},
         "head": {"x": "align", "y": "raise", "z": "forward"},
+        "torso": {"x": "center", "y": "raise", "z": "forward"},
         # "shoulder_left": {"x": "align", "y": "raise", "z": "forward"},
         # "shoulder_right": {"x": "align", "y": "raise", "z": "forward"},
     },
