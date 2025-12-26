@@ -103,6 +103,7 @@ def body_part_feedback(posture):
     elif posture == 'situp':
         body_parts = {
         'torso': ([11, 12, 23, 24], "torso"),
+        'head': ([0], "head"),
         # 'shoulder_left': ([11], "left shoulder"),
         # 'shoulder_right': ([12], "right shoulder"),
     }
@@ -177,7 +178,8 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     for part_name, (indices, display_name) in body_parts.items():
         part_diff = np.mean([np.linalg.norm(input_pose[i] - ref_pose[i]) for i in indices])
         print(f"Debug: {part_name} difference: {part_diff}", flush=True)
-        issues.append((display_name, part_diff, part_name, indices))
+        if part_diff > 0.005:
+            issues.append((display_name, part_diff, part_name, indices))
 
     # Sort by part_diff descending and take top 2
     issues_sorted = sorted(issues, key=lambda x: x[1], reverse=True)[:2]
@@ -384,7 +386,8 @@ JOINT_THRESHOLDS = {
     },
     # X: left/right, Y: up/down, Z: forward/backward (camera perspective)
     "situp": {
-        "torso": {"x": 0.08, "y": 0.005, "z": 0.06},
+        "torso": {"x": 0.08, "y": 0.02, "z": 0.06},
+        "head": {"x": 0.01, "y": 0.02, "z": 999},
         # "shoulder_left": {"x": 999, "y": 0.02, "z": 0.05},
         # "shoulder_right": {"x": 999, "y": 0.02, "z": 0.05},
     },
@@ -423,6 +426,7 @@ AXIS_FEEDBACK_MAP = {
     },
     "situp": {
         "torso": {"x": "center", "y": "raise", "z": "forward"},
+        "head": {"x": "align", "y": "raise", "z": "forward"},
         # "shoulder_left": {"x": "align", "y": "raise", "z": "forward"},
         # "shoulder_right": {"x": "align", "y": "raise", "z": "forward"},
     },
@@ -454,6 +458,7 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, 
     part_thresholds = posture_thresholds.get(part_name, {})
     
     x_threshold = part_thresholds.get("x")
+    print(f"Debug: {part_name} x diff: {diff[0]}, threshold: {x_threshold}", flush=True)
     y_threshold = part_thresholds.get("y")
     z_threshold = part_thresholds.get("z")
     
@@ -469,12 +474,11 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, 
         if x_feedback_type == "move":
             directions.append(f"move {('right' if diff[0] > 0 else 'left')}")
         elif x_feedback_type == "align":
+            # print(f"debug here!! {facingRight} , diff: {diff[0]}", flush=True)
             if facingRight == True:
                 directions.append(f"{'move forward' if diff[0] > 0 else 'move backward'}")
             elif facingRight == False:
                 directions.append(f"{'move backward' if diff[0] > 0 else 'move forward'}")
-            else :
-                directions.append(f"{'move right' if diff[0] > 0 else 'move left'}")
         elif x_feedback_type == "spread":
             directions.append(f"{'spread wider' if diff[0] > 0 else 'bring closer'}")
         elif x_feedback_type == "center":

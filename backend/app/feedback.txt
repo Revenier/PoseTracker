@@ -9,7 +9,7 @@
         3. Siku menekuk ke belakang, bukan ke samping. (hold) 
     ], 
     sit up: [
-        1. punggung, leher, paha lurus
+        1. hip ke knee,  lurus
         2. input Ankle sumbu Y+ ga boleh diatas ref
     ], 
     jumping jack: [
