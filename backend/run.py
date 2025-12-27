@@ -73,6 +73,7 @@ def receive_pose():
     results = []
     correct_count = 0
     total = 0
+    totalPoint = 0
 
     # Loop semua sample mediapipe yang dikirim (setiap sample = satu frame postur)
     for idx, arr in enumerate(mediapipe, start=1):
@@ -96,6 +97,9 @@ def receive_pose():
             if landmark_result.get('correct', False):
                 correct_count += 1
 
+            pointPerLandmark = landmark_result.get('point', 0)
+            totalPoint += pointPerLandmark
+
         except Exception as e:
             print(f"Error processing frame {idx}:")
             print(f"Error type: {type(e).__name__}")
@@ -117,14 +121,17 @@ def receive_pose():
 
     score = 0
     if total > 0:
-        score = int((correct_count / total) * 100)
+        score = int((totalPoint / total) * 100)
     if score >= 80:
         status = True
     else:
         status = False
 
+
     return ({
         'score': score,
+        'correctCount': correct_count,
+        'totalPoint': totalPoint,
         "status": status,
         "formattedFeedback": group_landmark_issue(results, score),
         "fullFeedback": group_landmark_feedback(results),

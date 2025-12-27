@@ -166,6 +166,7 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     if best_score > VERY_GOOD:
        return {
             "correct": True,
+            'point': 1,
             "issues": "Perfect form",
             "feedback": "Perfect form! Keep it up!",
             "score": best_score,
@@ -227,15 +228,20 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     # feedback_text = " | ".join(detailed_feedback)
     issue_text = f"Adjust your {' and '.join(top_issue_names)}" if top_issue_names else ""
 
+    point = 0
     if top_issue_names:
         if best_score > GOOD:
             correct = True
+            point = 1
         elif best_score > POOR:
             correct = False
+            point = 0
         else:
             correct = False
+            point = -1
         result = {
             "correct": correct,
+            "point": point,
             "issues": issue_text,
             "feedback": feedback_text,
             "score": best_score,
@@ -243,6 +249,7 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     else:
         result = {
             "correct": False,
+            "point": -1,
             "issues": "Incorrect position",
             "feedback": "Wrong form, try again!",
             "score": best_score,
