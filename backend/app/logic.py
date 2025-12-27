@@ -104,6 +104,8 @@ def body_part_feedback(posture):
         body_parts = {
         'head': ([0], "head"),
         'torso': ([11, 12, 23, 24], "torso"),
+        'ankle_left': ([27], "left ankle"),
+        'ankle_right': ([28], "right ankle"),
         # 'shoulder_left': ([11], "left shoulder"),
         # 'shoulder_right': ([12], "right shoulder"),
     }
@@ -153,7 +155,7 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     thresholds = {
         'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
         'squat':        {'VERY_GOOD': 0.99, 'GOOD': 0.96,  'POOR': 0.93},
-        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.97, 'POOR': 0.94},
+        'situp':        {'VERY_GOOD': 0.96,  'GOOD': 0.95, 'POOR': 0.94},
         'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
     }
     t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.93})
@@ -388,6 +390,8 @@ JOINT_THRESHOLDS = {
     "situp": {
         "head": {"x": 0.01, "y": 0.02, "z": 999},
         "torso": {"x": 0.08, "y": 0.03, "z": 0.06},
+        "ankle_left": {"x": 0.06, "y": 0.02, "z": 999},
+        "ankle_right": {"x": 0.06, "y": 0.02, "z": 999},
         # "shoulder_left": {"x": 999, "y": 0.02, "z": 0.05},
         # "shoulder_right": {"x": 999, "y": 0.02, "z": 0.05},
     },
@@ -427,6 +431,8 @@ AXIS_FEEDBACK_MAP = {
     "situp": {
         "head": {"x": "align", "y": "raise", "z": "forward"},
         "torso": {"x": "center", "y": "raise", "z": "forward"},
+        "ankle_left": {"x": "align", "y": "raise", "z": None},
+        "ankle_right": {"x": "align", "y": "raise", "z": None},
         # "shoulder_left": {"x": "align", "y": "raise", "z": "forward"},
         # "shoulder_right": {"x": "align", "y": "raise", "z": "forward"},
     },
