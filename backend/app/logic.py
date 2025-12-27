@@ -153,12 +153,12 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     best_score = round(float(sims), 4)
     
     thresholds = {
-        'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
-        'squat':        {'VERY_GOOD': 0.99, 'GOOD': 0.96,  'POOR': 0.93},
-        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.95, 'POOR': 0.93},
-        'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.93},
+        'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.94},
+        'squat':        {'VERY_GOOD': 0.99, 'GOOD': 0.96,  'POOR': 0.94},
+        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.95, 'POOR': 0.94},
+        'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.94},
     }
-    t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.93})
+    t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.94})
     VERY_GOOD = t['VERY_GOOD']
     GOOD = t['GOOD']
     POOR = t['POOR']
