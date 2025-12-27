@@ -155,7 +155,7 @@ def landmark_logic(posture, input_landmarks, facingRight, ref_landmarks=None):
     thresholds = {
         'push_up':      {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.94},
         'squat':        {'VERY_GOOD': 0.99, 'GOOD': 0.96,  'POOR': 0.94},
-        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.95, 'POOR': 0.94},
+        'situp':        {'VERY_GOOD': 0.99,  'GOOD': 0.97, 'POOR': 0.94},
         'jumping_jack': {'VERY_GOOD': 0.99,  'GOOD': 0.96,  'POOR': 0.94},
     }
     t = thresholds.get(posture, {'VERY_GOOD': 0.99, 'GOOD': 0.95, 'POOR': 0.94})
