@@ -496,7 +496,10 @@ def get_directional_feedback(posture, part_name, indices, input_pose, ref_pose, 
         if y_feedback_type is None:
             pass
         elif y_feedback_type == "raise":
-            directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
+            if posture == "situp":
+                directions.append(f"{'lower'}")
+            else:
+                directions.append(f"{'raise' if diff[1] < 0 else 'lower'}")
         elif y_feedback_type == "lower":
             directions.append(f"{'lower' if diff[1] > 0 else 'raise'}")
         elif y_feedback_type == "bend":
